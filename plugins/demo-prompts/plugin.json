@@ -1,0 +1,76 @@
+{
+  "id": "demo-prompts",
+  "name": "Demo Prompt Capabilities",
+  "type": "general",
+  "version": "1.0.0",
+  "plugin_api": "v0",
+  "minimum_core": "0.0.1",
+  "runtime": {
+    "kind": "config-only"
+  },
+  "requested_trust": "untrusted",
+  "compatible_niches": [
+    {
+      "id": "demo",
+      "version": "^1.0"
+    }
+  ],
+  "permissions": [],
+  "namespace_delegations_requested": [
+    "demo"
+  ],
+  "provides": [
+    {
+      "capability": "demo/writing",
+      "executor": "prompt",
+      "prompt": "prompts/writing.md",
+      "rules": [
+        {
+          "type": "prompt-context",
+          "path": "rules/style.md"
+        }
+      ],
+      "uses": {
+        "capability": "text-generation",
+        "purpose": "demo-writing"
+      },
+      "requirements": {
+        "supports_json_schema": false
+      },
+      "input": {
+        "contract": "project.brief",
+        "version": "^1.0"
+      },
+      "output": {
+        "contract": "script",
+        "version": "^1.0"
+      }
+    },
+    {
+      "capability": "demo/review",
+      "executor": "prompt",
+      "prompt": "prompts/review.md",
+      "rules": [
+        {
+          "type": "validator",
+          "path": "rules/review-output.json"
+        }
+      ],
+      "uses": {
+        "capability": "text-generation",
+        "purpose": "demo-review"
+      },
+      "requirements": {
+        "supports_json_schema": true
+      },
+      "input": {
+        "contract": "script",
+        "version": "^1.0"
+      },
+      "output": {
+        "contract": "text-generation.result",
+        "version": "^1.0"
+      }
+    }
+  ]
+}
