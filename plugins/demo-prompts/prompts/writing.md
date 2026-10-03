@@ -1,0 +1,1 @@
+Write a short deterministic demo script from the supplied project brief. Follow the style rules.\n
