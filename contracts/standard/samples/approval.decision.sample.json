@@ -1,0 +1,10 @@
+{
+  "action": "approve",
+  "actor": "admin",
+  "target": {
+    "artifact_id": "artifact-123",
+    "generation": 2
+  },
+  "timestamp": "2026-10-04T10:00:00Z",
+  "feedback": "Ready."
+}
