@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yg-plug-play.local/schemas/settings.schema.json",
+  "title": "YG-PLUG-PLAY Settings Definition v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["fields"],
+  "properties": {
+    "version": {"type": "integer", "minimum": 1, "default": 1},
+    "fields": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/field"}
+    }
+  },
+  "$defs": {
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+    },
+    "scope": {
+      "enum": ["platform", "channel", "project", "run"]
+    },
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "label"],
+      "properties": {
+        "value": {"type": ["string", "number", "boolean"]},
+        "label": {"type": "string", "minLength": 1}
+      }
+    },
+    "optionsSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability"],
+      "properties": {
+        "capability": {
+          "type": "string",
+          "pattern": "^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*/)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+        },
+        "path": {"type": "string", "minLength": 1},
+        "value_field": {"type": "string", "minLength": 1},
+        "label_field": {"type": "string", "minLength": 1}
+      }
+    },
+    "base": {
+      "type": "object",
+      "required": ["key", "type", "allowed_scopes"],
+      "properties": {
+        "key": {"$ref": "#/$defs/key"},
+        "label": {"type": "string", "minLength": 1},
+        "description": {"type": "string"},
+        "type": {"enum": ["string", "number", "bool", "select", "secret", "multiselect"]},
+        "required": {"type": "boolean", "default": false},
+        "allowed_scopes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/scope"}
+        },
+        "platform_fallback": {"type": "boolean", "default": false}
+      }
+    },
+    "field": {
+      "oneOf": [
+        {
+          "allOf": [
+            {"$ref": "#/$defs/base"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "key": true, "label": true, "description": true, "required": true,
+                "allowed_scopes": true, "platform_fallback": true,
+                "type": {"const": "string"},
+                "default": {"type": "string"}
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {"$ref": "#/$defs/base"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "key": true, "label": true, "description": true, "required": true,
+                "allowed_scopes": true, "platform_fallback": true,
+                "type": {"const": "number"},
+                "default": {"type": "number"}
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {"$ref": "#/$defs/base"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "key": true, "label": true, "description": true, "required": true,
+                "allowed_scopes": true, "platform_fallback": true,
+                "type": {"const": "bool"},
+                "default": {"type": "boolean"}
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {"$ref": "#/$defs/base"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "key": true, "label": true, "description": true, "required": true,
+                "allowed_scopes": true, "platform_fallback": true,
+                "type": {"const": "secret"}
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {"$ref": "#/$defs/base"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "key": true, "label": true, "description": true, "required": true,
+                "allowed_scopes": true, "platform_fallback": true,
+                "type": {"const": "select"},
+                "default": {"type": ["string", "number", "boolean"]},
+                "options": {
+                  "type": "array", "minItems": 1, "items": {"$ref": "#/$defs/option"}
+                },
+                "options_source": {"$ref": "#/$defs/optionsSource"}
+              },
+              "oneOf": [
+                {"required": ["options"], "not": {"required": ["options_source"]}},
+                {"required": ["options_source"], "not": {"required": ["options"]}}
+              ]
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {"$ref": "#/$defs/base"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "key": true, "label": true, "description": true, "required": true,
+                "allowed_scopes": true, "platform_fallback": true,
+                "type": {"const": "multiselect"},
+                "default": {
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {"type": ["string", "number", "boolean"]}
+                },
+                "options": {
+                  "type": "array", "minItems": 1, "items": {"$ref": "#/$defs/option"}
+                },
+                "options_source": {"$ref": "#/$defs/optionsSource"}
+              },
+              "oneOf": [
+                {"required": ["options"], "not": {"required": ["options_source"]}},
+                {"required": ["options_source"], "not": {"required": ["options"]}}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
