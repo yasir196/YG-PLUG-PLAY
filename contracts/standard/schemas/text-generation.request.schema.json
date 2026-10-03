@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Text Generation Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "messages"
+  ],
+  "properties": {
+    "messages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "content"
+        ],
+        "properties": {
+          "role": {
+            "enum": [
+              "system",
+              "user",
+              "assistant",
+              "tool"
+            ]
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "response_schema": {
+      "type": "object"
+    },
+    "tools": {
+      "type": "array"
+    },
+    "max_tokens": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "temperature": {
+      "type": "number"
+    },
+    "attachments": {
+      "type": "array"
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}
