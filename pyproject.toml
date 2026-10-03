@@ -4,11 +4,11 @@ version = "0.0.1"
 description = "Plugin-first local content production platform"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [\n    "pydantic>=2.11,<3",\n]
 
 [dependency-groups]
 dev = [
-    "mypy>=1.18,<2",
+    "jsonschema>=4.25,<5",\n    "mypy>=1.18,<2",
     "pytest>=8.4,<9",
     "ruff>=0.13,<1",
 ]
