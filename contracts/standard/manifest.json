@@ -1,0 +1,85 @@
+{
+  "id": "yg-standard-contracts",
+  "name": "YG Standard Contracts",
+  "version": "1.0.0",
+  "contracts": [
+    {
+      "id": "project.brief",
+      "version": "1.0.0",
+      "schema": "schemas/project.brief.schema.json",
+      "sample": "samples/project.brief.sample.json"
+    },
+    {
+      "id": "text-generation.request",
+      "version": "1.0.0",
+      "schema": "schemas/text-generation.request.schema.json",
+      "sample": "samples/text-generation.request.sample.json"
+    },
+    {
+      "id": "text-generation.result",
+      "version": "1.0.0",
+      "schema": "schemas/text-generation.result.schema.json",
+      "sample": "samples/text-generation.result.sample.json"
+    },
+    {
+      "id": "research",
+      "version": "1.0.0",
+      "schema": "schemas/research.schema.json",
+      "sample": "samples/research.sample.json"
+    },
+    {
+      "id": "script",
+      "version": "1.0.0",
+      "schema": "schemas/script.schema.json",
+      "sample": "samples/script.sample.json"
+    },
+    {
+      "id": "approval.decision",
+      "version": "1.0.0",
+      "schema": "schemas/approval.decision.schema.json",
+      "sample": "samples/approval.decision.sample.json"
+    },
+    {
+      "id": "image.request",
+      "version": "1.0.0",
+      "schema": "schemas/image.request.schema.json",
+      "sample": "samples/image.request.sample.json"
+    },
+    {
+      "id": "image.request.collection",
+      "version": "1.0.0",
+      "schema": "schemas/image.request.collection.schema.json",
+      "sample": "samples/image.request.collection.sample.json"
+    },
+    {
+      "id": "image.asset",
+      "version": "1.0.0",
+      "schema": "schemas/image.asset.schema.json",
+      "sample": "samples/image.asset.sample.json"
+    },
+    {
+      "id": "voice.request",
+      "version": "1.0.0",
+      "schema": "schemas/voice.request.schema.json",
+      "sample": "samples/voice.request.sample.json"
+    },
+    {
+      "id": "audio.asset",
+      "version": "1.0.0",
+      "schema": "schemas/audio.asset.schema.json",
+      "sample": "samples/audio.asset.sample.json"
+    },
+    {
+      "id": "timeline",
+      "version": "1.0.0",
+      "schema": "schemas/timeline.schema.json",
+      "sample": "samples/timeline.sample.json"
+    },
+    {
+      "id": "pre-publish.checklist",
+      "version": "1.0.0",
+      "schema": "schemas/pre-publish.checklist.schema.json",
+      "sample": "samples/pre-publish.checklist.sample.json"
+    }
+  ]
+}
