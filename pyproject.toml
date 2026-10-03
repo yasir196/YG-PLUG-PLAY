@@ -1,0 +1,46 @@
+[project]
+name = "yg-plug-play"
+version = "0.0.1"
+description = "Plugin-first local content production platform"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18,<2",
+    "pytest>=8.4,<9",
+    "ruff>=0.13,<1",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = [
+    ".venv",
+    ".data",
+    "data",
+    "runtime",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = []
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_configs = true
+exclude = "(^|/)(\.venv|\.data|data|runtime)/"
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
