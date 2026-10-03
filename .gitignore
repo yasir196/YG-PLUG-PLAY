@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# Secrets / local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# YG-PLUG-PLAY mutable data MUST remain outside the repository.
+# Ignore defensively if a developer points the data root here by mistake.
+data/
+.data/
+db/
+packages/
+artifacts/
+plugin-data/
+prompts/
+runtime/
+wheelhouse/
+exports/
+backups/
+logs/
+scratch/
+
+# Common nested runtime/data paths
+**/runtime/
+**/scratch/
+**/artifacts/
+**/plugin-data/
+**/backups/
+**/logs/
