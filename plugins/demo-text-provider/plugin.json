@@ -1,0 +1,39 @@
+{
+  "id": "demo-text-provider",
+  "name": "Demo Text Provider",
+  "type": "general",
+  "version": "1.0.0",
+  "plugin_api": "v0",
+  "minimum_core": "0.0.1",
+  "runtime": {
+    "kind": "python-subprocess",
+    "python": ">=3.12",
+    "entrypoint": "provider.py",
+    "lock_file": "uv.lock"
+  },
+  "requested_trust": "trusted",
+  "compatible_niches": [
+    "*"
+  ],
+  "permissions": [],
+  "provides": [
+    {
+      "capability": "text-generation",
+      "executor": "rpc",
+      "input": {
+        "contract": "text-generation.request",
+        "version": "^1.0"
+      },
+      "output": {
+        "contract": "text-generation.result",
+        "version": "^1.0"
+      },
+      "features": {
+        "supports_json_schema": true,
+        "supports_streaming": false,
+        "supports_token_count": true,
+        "max_context_tokens": 16000
+      }
+    }
+  ]
+}
