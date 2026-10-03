@@ -1,0 +1,38 @@
+{
+  "id": "demo",
+  "name": "Demo Niche",
+  "type": "niche",
+  "version": "1.0.0",
+  "plugin_api": "v0",
+  "minimum_core": "0.0.1",
+  "runtime": {
+    "kind": "config-only"
+  },
+  "requested_trust": "untrusted",
+  "compatible_niches": [
+    {
+      "id": "demo",
+      "version": "^1.0"
+    }
+  ],
+  "permissions": [],
+  "provides": [
+    {
+      "capability": "demo/brief-ready",
+      "executor": "prompt",
+      "prompt": "prompts/brief-ready.md",
+      "uses": {
+        "capability": "text-generation",
+        "purpose": "demo/brief-ready"
+      },
+      "input": {
+        "contract": "project.brief",
+        "version": "^1.0"
+      },
+      "output": {
+        "contract": "script",
+        "version": "^1.0"
+      }
+    }
+  ]
+}
