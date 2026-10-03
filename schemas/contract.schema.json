@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yg-plug-play.local/schemas/contract.schema.json",
+  "title": "YG-PLUG-PLAY Contract Registration v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "version", "schema"],
+  "properties": {
+    "id": {"$ref": "#/$defs/contractId"},
+    "version": {"$ref": "#/$defs/semver"},
+    "description": {"type": "string"},
+    "schema": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "$schema": {"type": "string"},
+        "$id": {"type": "string"},
+        "type": {"type": ["string", "array"]}
+      }
+    }
+  },
+  "$defs": {
+    "contractId": {"type": "string", "pattern": "^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*/)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)*$"},
+    "semver": {"type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"}
+  }
+}
