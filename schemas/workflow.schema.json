@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yg-plug-play.local/schemas/workflow.schema.json",
+  "title": "YG-PLUG-PLAY Workflow v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "version", "start", "nodes"],
+  "properties": {
+    "id": {"$ref": "#/$defs/kebab"},
+    "version": {"type": "integer", "minimum": 1},
+    "start": {"$ref": "#/$defs/kebab"},
+    "nodes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/node"}}
+  },
+  "$defs": {
+    "kebab": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"},
+    "capability": {"type": "string", "pattern": "^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*/)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"},
+    "contract": {"type": "string", "pattern": "^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*/)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)*$"},
+    "target": {"oneOf": [{"$ref": "#/$defs/kebab"}, {"const": "$self"}]},
+    "path": {"type": "string", "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)*$"},
+    "contractRef": {
+      "type": "object", "additionalProperties": false, "required": ["contract", "version"],
+      "properties": {"contract": {"$ref": "#/$defs/contract"}, "version": {"type": "string", "minLength": 1}}
+    },
+    "collectionOutput": {
+      "allOf": [
+        {"$ref": "#/$defs/contractRef"},
+        {"type": "object", "properties": {
+          "collection": {
+            "type": "object", "additionalProperties": false,
+            "properties": {
+              "allow_partial": {"type": "boolean"},
+              "min_items": {"type": "integer", "minimum": 0},
+              "min_success_ratio": {"type": "number", "minimum": 0, "maximum": 1}
+            }
+          }
+        }}
+      ]
+    },
+    "selector": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false, "required": ["from"],
+          "properties": {
+            "from": {"type": "string", "pattern": "^(?:\\$run\\.[a-z][a-z0-9-]*|[a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*)$"},
+            "optional": {"type": "boolean"}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["latest"],
+          "properties": {
+            "latest": {"$ref": "#/$defs/contract"},
+            "among": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*$"}},
+            "optional": {"type": "boolean"}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["approved"],
+          "properties": {
+            "approved": {"$ref": "#/$defs/contract"},
+            "among": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*$"}},
+            "tag": {"$ref": "#/$defs/kebab"},
+            "optional": {"type": "boolean"}
+          }
+        }
+      ]
+    },
+    "inputs": {"type": "object", "additionalProperties": {"$ref": "#/$defs/selector"}},
+    "outputs": {"type": "object", "additionalProperties": {"$ref": "#/$defs/collectionOutput"}},
+    "loopControl": {
+      "type": "object", "additionalProperties": false,
+      "required": ["counter", "max_attempts", "on_exhausted"],
+      "properties": {
+        "counter": {"$ref": "#/$defs/kebab"},
+        "max_attempts": {"type": "integer", "minimum": 1},
+        "on_exhausted": {"$ref": "#/$defs/kebab"},
+        "reset_on": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/kebab"}}
+      }
+    },
+    "jsonLogic": {
+      "description": "Declarative JSONLogic expression. Semantic operator validation is performed by Core.",
+      "oneOf": [
+        {"type": ["string", "number", "boolean", "null"]},
+        {"type": "array", "items": {"$ref": "#/$defs/jsonLogic"}},
+        {
+          "type": "object", "minProperties": 1, "maxProperties": 1,
+          "additionalProperties": {
+            "oneOf": [
+              {"$ref": "#/$defs/jsonLogic"},
+              {"type": "array", "items": {"$ref": "#/$defs/jsonLogic"}}
+            ]
+          }
+        }
+      ]
+    },
+    "failurePolicy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mode", "max_attempts", "on_exhausted"],
+      "properties": {
+        "mode": {"const": "retry-failed-items"},
+        "max_attempts": {"type": "integer", "minimum": 1},
+        "on_exhausted": {"$ref": "#/$defs/kebab"}
+      }
+    },
+    "capabilityNode": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "type", "capability"],
+      "properties": {
+        "id": {"$ref": "#/$defs/kebab"}, "type": {"const": "capability"},
+        "capability": {"$ref": "#/$defs/capability"}, "variant": {"$ref": "#/$defs/kebab"},
+        "inputs": {"$ref": "#/$defs/inputs"}, "outputs": {"$ref": "#/$defs/outputs"},
+        "loop_control": {"$ref": "#/$defs/loopControl"}, "next": {"$ref": "#/$defs/target"}
+      }
+    },
+    "conditionNode": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "type", "inputs", "expression", "true_next", "false_next"],
+      "properties": {
+        "id": {"$ref": "#/$defs/kebab"}, "type": {"const": "condition"},
+        "inputs": {"$ref": "#/$defs/inputs"}, "expression": {"$ref": "#/$defs/jsonLogic"},
+        "true_next": {"$ref": "#/$defs/target"}, "false_next": {"$ref": "#/$defs/target"}
+      }
+    },
+    "approval": {
+      "type": "object", "additionalProperties": false,
+      "required": ["roles", "actions"],
+      "properties": {
+        "roles": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/kebab"}},
+        "artifact": {"$ref": "#/$defs/selector"},
+        "actions": {"type": "object", "minProperties": 1, "additionalProperties": {"$ref": "#/$defs/target"}}
+      }
+    },
+    "approvalNode": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "type", "approval"],
+      "properties": {
+        "id": {"$ref": "#/$defs/kebab"}, "type": {"const": "human-approval"},
+        "inputs": {"$ref": "#/$defs/inputs"}, "outputs": {"$ref": "#/$defs/outputs"},
+        "branch_context": {"$ref": "#/$defs/kebab"}, "approval": {"$ref": "#/$defs/approval"}
+      }
+    },
+    "mapNode": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "type", "inputs", "items_from", "capability", "outputs"],
+      "properties": {
+        "id": {"$ref": "#/$defs/kebab"}, "type": {"const": "map"},
+        "inputs": {"$ref": "#/$defs/inputs"}, "items_from": {"$ref": "#/$defs/path"},
+        "capability": {"$ref": "#/$defs/capability"}, "concurrency": {"type": "integer", "minimum": 1},
+        "failure_policy": {"$ref": "#/$defs/failurePolicy"}, "outputs": {"$ref": "#/$defs/outputs"},
+        "next": {"$ref": "#/$defs/target"}
+      }
+    },
+    "parallelNode": {
+      "type": "object", "additionalProperties": false, "required": ["id", "type", "branches", "join"],
+      "properties": {
+        "id": {"$ref": "#/$defs/kebab"}, "type": {"const": "parallel"},
+        "branches": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"$ref": "#/$defs/kebab"}},
+        "join": {"$ref": "#/$defs/kebab"}
+      }
+    },
+    "joinNode": {
+      "type": "object", "additionalProperties": false, "required": ["id", "type", "branches", "policy"],
+      "properties": {
+        "id": {"$ref": "#/$defs/kebab"}, "type": {"const": "join"},
+        "branches": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/kebab"}},
+        "policy": {
+          "type": "object", "additionalProperties": false,
+          "required": ["require", "on_terminal_reject"],
+          "properties": {
+            "require": {"enum": ["all-successful", "all-successful-or-approved-partial"]},
+            "on_terminal_reject": {"enum": ["cancel-other-branches", "wait-other-branches"]}
+          }
+        },
+        "next": {"$ref": "#/$defs/target"}
+      }
+    },
+    "endNode": {
+      "type": "object", "additionalProperties": false, "required": ["id", "type", "status"],
+      "properties": {
+        "id": {"$ref": "#/$defs/kebab"}, "type": {"const": "end"},
+        "status": {"enum": ["success", "rejected", "failed", "cancelled"]}
+      }
+    },
+    "node": {"oneOf": [
+      {"$ref": "#/$defs/capabilityNode"}, {"$ref": "#/$defs/conditionNode"},
+      {"$ref": "#/$defs/approvalNode"}, {"$ref": "#/$defs/mapNode"},
+      {"$ref": "#/$defs/parallelNode"}, {"$ref": "#/$defs/joinNode"},
+      {"$ref": "#/$defs/endNode"}
+    ]}
+  }
+}
