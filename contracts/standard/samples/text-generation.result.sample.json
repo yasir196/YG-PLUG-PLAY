@@ -1,0 +1,8 @@
+{
+  "content": "1. Introduction\\n2. Main points",
+  "finish_reason": "stop",
+  "usage": {
+    "input_tokens": 12,
+    "output_tokens": 24
+  }
+}
