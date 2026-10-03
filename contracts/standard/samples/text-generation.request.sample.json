@@ -1,0 +1,9 @@
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Write a concise outline."
+    }
+  ],
+  "max_tokens": 800
+}
