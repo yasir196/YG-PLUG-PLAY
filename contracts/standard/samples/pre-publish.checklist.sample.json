@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "id": "title-present",
+      "passed": true
+    },
+    {
+      "id": "timeline-ready",
+      "passed": true
+    }
+  ],
+  "override_allowed": true
+}
