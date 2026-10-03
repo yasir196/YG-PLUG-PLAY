@@ -1,0 +1,1 @@
+Return a concise confirmation that the supplied project brief is ready for the demo workflow.\n
