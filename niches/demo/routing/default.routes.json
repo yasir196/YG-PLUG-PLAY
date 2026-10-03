@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "routes": [
+    {
+      "capability": "text-generation",
+      "purpose": "demo-writing",
+      "primary_plugin_id": "demo-text-provider",
+      "options": {
+        "model": "demo-deterministic",
+        "temperature": 0,
+        "max_tokens": 1200
+      }
+    },
+    {
+      "capability": "text-generation",
+      "purpose": "demo-review",
+      "primary_plugin_id": "demo-text-provider",
+      "options": {
+        "model": "demo-deterministic",
+        "temperature": 0,
+        "max_tokens": 500
+      }
+    },
+    {
+      "capability": "text-generation",
+      "purpose": "demo/brief-ready",
+      "primary_plugin_id": "demo-text-provider",
+      "options": {
+        "model": "demo-deterministic",
+        "temperature": 0,
+        "max_tokens": 300
+      }
+    }
+  ]
+}
