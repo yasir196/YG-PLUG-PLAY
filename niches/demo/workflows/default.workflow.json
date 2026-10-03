@@ -1,0 +1,76 @@
+{
+  "id": "demo-production",
+  "version": 1,
+  "start": "write",
+  "nodes": [
+    {
+      "id": "write",
+      "type": "capability",
+      "capability": "demo/writing",
+      "inputs": {
+        "brief": {
+          "from": "$run.project-brief"
+        }
+      },
+      "outputs": {
+        "script": {
+          "contract": "script",
+          "version": "^1.0"
+        }
+      },
+      "next": "review"
+    },
+    {
+      "id": "review",
+      "type": "capability",
+      "capability": "demo/review",
+      "inputs": {
+        "script": {
+          "from": "write.script"
+        }
+      },
+      "outputs": {
+        "review": {
+          "contract": "text-generation.result",
+          "version": "^1.0"
+        }
+      },
+      "next": "approval"
+    },
+    {
+      "id": "approval",
+      "type": "human-approval",
+      "inputs": {
+        "script": {
+          "from": "write.script"
+        },
+        "review": {
+          "from": "review.review"
+        }
+      },
+      "approval": {
+        "roles": [
+          "channel-manager"
+        ],
+        "artifact": {
+          "from": "write.script"
+        },
+        "actions": {
+          "approve": "end-success",
+          "edit": "$self",
+          "reject": "end-rejected"
+        }
+      }
+    },
+    {
+      "id": "end-success",
+      "type": "end",
+      "status": "success"
+    },
+    {
+      "id": "end-rejected",
+      "type": "end",
+      "status": "rejected"
+    }
+  ]
+}
