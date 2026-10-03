@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yg-plug-play.local/schemas/plugin.schema.json",
+  "title": "YG-PLUG-PLAY Plugin Manifest v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "type", "version", "plugin_api", "minimum_core", "runtime", "compatible_niches", "permissions", "provides"],
+  "properties": {
+    "id": {"$ref": "#/$defs/pluginId"},
+    "name": {"type": "string", "minLength": 1},
+    "type": {"enum": ["general", "niche"]},
+    "version": {"$ref": "#/$defs/semver"},
+    "plugin_api": {"const": "v0"},
+    "minimum_core": {"$ref": "#/$defs/semver"},
+    "runtime": {"$ref": "#/$defs/runtime"},
+    "requested_trust": {"enum": ["trusted", "restricted", "untrusted"], "default": "untrusted"},
+    "compatible_niches": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": {"oneOf": [{"const": "*"}, {"$ref": "#/$defs/nicheCompatibility"}]}
+    },
+    "permissions": {
+      "type": "array", "uniqueItems": true,
+      "items": {"$ref": "#/$defs/permission"}
+    },
+    "credentials": {
+      "type": "array", "uniqueItems": true,
+      "items": {"$ref": "#/$defs/credential"}
+    },
+    "provides": {
+      "type": "array", "minItems": 1,
+      "items": {"$ref": "#/$defs/providedCapability"}
+    },
+    "events": {"$ref": "#/$defs/events"},
+    "settings_schema": {"$ref": "#/$defs/relativePath"},
+    "namespace_delegations_requested": {
+      "type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/kebabId"}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"type": {"const": "niche"}}, "required": ["type"]},
+      "then": {
+        "properties": {
+          "compatible_niches": {
+            "type": "array", "minItems": 1,
+            "items": {"$ref": "#/$defs/nicheCompatibility"}
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "kebabId": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"},
+    "pluginId": {
+      "type": "string",
+      "pattern": "^(?!(?:core|system|project|channel|yg)$)(?!yg-)[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "capabilityId": {
+      "type": "string",
+      "pattern": "^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*/)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "contractId": {
+      "type": "string",
+      "pattern": "^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*/)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)*$"
+    },
+    "eventId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)+$"
+    },
+    "semver": {"type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"},
+    "versionRange": {"type": "string", "minLength": 1, "maxLength": 64},
+    "relativePath": {
+      "type": "string", "minLength": 1,
+      "not": {"anyOf": [{"pattern": "^[A-Za-z]:"}, {"pattern": "^[/\\\\]"}, {"pattern": "(?:^|[/\\\\])\\.\\.(?:[/\\\\]|$)"}]}
+    },
+    "runtime": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["kind", "python", "entrypoint", "lock_file"],
+          "properties": {
+            "kind": {"const": "python-subprocess"},
+            "python": {"type": "string", "minLength": 1},
+            "entrypoint": {"$ref": "#/$defs/relativePath"},
+            "lock_file": {"$ref": "#/$defs/relativePath"}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {"kind": {"const": "config-only"}}
+        }
+      ]
+    },
+    "nicheCompatibility": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {"id": {"$ref": "#/$defs/kebabId"}, "version": {"$ref": "#/$defs/versionRange"}}
+    },
+    "permission": {
+      "type": "string",
+      "enum": [
+        "artifact.read", "artifact.write", "plugin-data.read", "plugin-data.write",
+        "provider.jobs", "events.emit", "events.listen", "settings.read",
+        "network.http", "network.sse", "network.websocket",
+        "credential.raw"
+      ]
+    },
+    "inject": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "name"],
+      "properties": {"type": {"enum": ["header", "query"]}, "name": {"type": "string", "minLength": 1}}
+    },
+    "domain": {
+      "type": "string",
+      "pattern": "^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+    },
+    "credential": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "mode", "inject", "allowed_domains"],
+      "properties": {
+        "name": {"$ref": "#/$defs/kebabId"},
+        "mode": {"enum": ["proxy", "raw"]},
+        "inject": {"$ref": "#/$defs/inject"},
+        "allowed_domains": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/domain"}}
+      }
+    },
+    "contractRef": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract", "version"],
+      "properties": {"contract": {"$ref": "#/$defs/contractId"}, "version": {"$ref": "#/$defs/versionRange"}}
+    },
+    "rule": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "path"],
+      "properties": {"type": {"enum": ["prompt-context", "validator"]}, "path": {"$ref": "#/$defs/relativePath"}}
+    },
+    "uses": {
+      "type": "object", "additionalProperties": false,
+      "required": ["capability", "purpose"],
+      "properties": {"capability": {"$ref": "#/$defs/capabilityId"}, "purpose": {"$ref": "#/$defs/capabilityId"}}
+    },
+    "featureSet": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "supports_json_schema": {"type": "boolean"},
+        "supports_image_input": {"type": "boolean"},
+        "supports_web_search": {"type": "boolean"},
+        "supports_streaming": {"type": "boolean"},
+        "supports_token_count": {"type": "boolean"},
+        "supports_websocket": {"type": "boolean"},
+        "max_context_tokens": {"type": "integer", "minimum": 1}
+      }
+    },
+    "providedCapability": {
+      "type": "object", "additionalProperties": false,
+      "required": ["capability", "input", "output"],
+      "properties": {
+        "capability": {"$ref": "#/$defs/capabilityId"},
+        "variant": {"$ref": "#/$defs/kebabId"},
+        "input": {"$ref": "#/$defs/contractRef"},
+        "output": {"$ref": "#/$defs/contractRef"},
+        "executor": {"enum": ["rpc", "prompt"]},
+        "prompt": {"$ref": "#/$defs/relativePath"},
+        "rules": {"type": "array", "items": {"$ref": "#/$defs/rule"}},
+        "uses": {"$ref": "#/$defs/uses"},
+        "requirements": {"$ref": "#/$defs/featureSet"},
+        "features": {"$ref": "#/$defs/featureSet"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"executor": {"const": "prompt"}}, "required": ["executor"]},
+          "then": {"required": ["prompt", "uses"]}
+        }
+      ]
+    },
+    "events": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "emits": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/eventId"}},
+        "listens": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/eventId"}}
+      }
+    }
+  }
+}
