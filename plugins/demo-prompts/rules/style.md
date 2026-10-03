@@ -1,0 +1,1 @@
+Use plain language, short paragraphs, and no unsupported claims.\n
