@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yg-plug-play.local/schemas/capability.schema.json",
+  "title": "YG-PLUG-PLAY Capability Registration v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "version", "input", "output"],
+  "properties": {
+    "id": {"$ref": "#/$defs/capabilityId"},
+    "version": {"$ref": "#/$defs/semver"},
+    "description": {"type": "string"},
+    "variant": {"$ref": "#/$defs/kebabId"},
+    "input": {"$ref": "#/$defs/contractRef"},
+    "output": {"$ref": "#/$defs/contractRef"},
+    "features": {"$ref": "#/$defs/features"},
+    "requirements": {"$ref": "#/$defs/features"}
+  },
+  "$defs": {
+    "kebabId": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"},
+    "capabilityId": {"type": "string", "pattern": "^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*/)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"},
+    "contractId": {"type": "string", "pattern": "^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*/)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)*$"},
+    "semver": {"type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"},
+    "contractRef": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract", "version"],
+      "properties": {
+        "contract": {"$ref": "#/$defs/contractId"},
+        "version": {"type": "string", "minLength": 1}
+      }
+    },
+    "features": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "supports_json_schema": {"type": "boolean"},
+        "supports_image_input": {"type": "boolean"},
+        "supports_web_search": {"type": "boolean"},
+        "supports_streaming": {"type": "boolean"},
+        "supports_token_count": {"type": "boolean"},
+        "supports_websocket": {"type": "boolean"},
+        "max_context_tokens": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}
