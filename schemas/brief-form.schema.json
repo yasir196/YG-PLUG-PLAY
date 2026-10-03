@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yg-plug-play.local/schemas/brief-form.schema.json",
+  "title": "YG-PLUG-PLAY Niche Brief Form v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "fields"],
+  "properties": {
+    "version": {"type": "integer", "minimum": 1},
+    "title": {"type": "string", "minLength": 1},
+    "fields": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/field"}
+    }
+  },
+  "$defs": {
+    "key": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"},
+    "option": {
+      "type": "object", "additionalProperties": false,
+      "required": ["value", "label"],
+      "properties": {
+        "value": {"type": ["string", "number", "boolean"]},
+        "label": {"type": "string", "minLength": 1}
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "type", "label"],
+      "properties": {
+        "key": {"$ref": "#/$defs/key"},
+        "type": {"enum": ["string", "text", "number", "bool", "select", "multiselect"]},
+        "label": {"type": "string", "minLength": 1},
+        "description": {"type": "string"},
+        "required": {"type": "boolean", "default": false},
+        "default": {},
+        "options": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/option"}}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"type": {"enum": ["select", "multiselect"]}}, "required": ["type"]},
+          "then": {"required": ["options"]}
+        },
+        {
+          "if": {"properties": {"type": {"const": "string"}}, "required": ["type"]},
+          "then": {"properties": {"default": {"type": "string"}}}
+        },
+        {
+          "if": {"properties": {"type": {"const": "text"}}, "required": ["type"]},
+          "then": {"properties": {"default": {"type": "string"}}}
+        },
+        {
+          "if": {"properties": {"type": {"const": "number"}}, "required": ["type"]},
+          "then": {"properties": {"default": {"type": "number"}}}
+        },
+        {
+          "if": {"properties": {"type": {"const": "bool"}}, "required": ["type"]},
+          "then": {"properties": {"default": {"type": "boolean"}}}
+        },
+        {
+          "if": {"properties": {"type": {"const": "select"}}, "required": ["type"]},
+          "then": {"properties": {"default": {"type": ["string", "number", "boolean"]}}}
+        },
+        {
+          "if": {"properties": {"type": {"const": "multiselect"}}, "required": ["type"]},
+          "then": {"properties": {"default": {"type": "array", "uniqueItems": true}}}
+        }
+      ]
+    }
+  }
+}
