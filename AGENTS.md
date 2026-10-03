@@ -4,7 +4,7 @@ Read this file before every task. It is the repository-level operating contract 
 
 ## Authority
 
-Architecture baseline: **YG-PLUG-PLAY Architecture V5 (frozen) + Freeze Review Errata**.
+Architecture baseline: **`docs/ARCHITECTURE_V5.md` (frozen) + `docs/ERRATA_V5.md`**. If an older V5 example conflicts with Errata, Errata controls.
 
 Do not create V6 for implementation details. Existing Senior Health / MasterProduction repositories are out of scope unless the user explicitly requests changes there.
 
@@ -165,3 +165,21 @@ Before declaring completion:
 8. Check loops/retries/fallbacks are bounded and distinct.
 9. Check audit/provenance for state-changing actions.
 10. State what was implemented, intentionally deferred and any remaining limitation.
+
+
+## Coding conventions
+
+- Python: target Python 3.12+, type-hint public interfaces, keep modules small and dependency direction explicit.
+- Prefer dataclasses/Pydantic-style boundary models and pure functions for validators; keep side effects behind service/repository interfaces.
+- JSON/JSON Schema: Draft 2020-12, UTF-8, deterministic formatting, explicit `additionalProperties` policy, reusable definitions instead of duplicated regexes.
+- Public IDs and schema examples must pass the canonical naming validators.
+- Filesystem paths are `pathlib.Path` internally; never concatenate untrusted paths or rely on the process CWD for mutable data.
+- No arbitrary shell strings. External process execution goes through the approved Tool/worker boundary with argument arrays.
+- Never use `eval()`/`exec()` for workflow, templates, rules or plugin validation.
+- Tests accompany schema/semantic behavior. Every security regression gets a negative test.
+- Validation code must be deterministic and side-effect free: no imports from plugin packages, network calls, subprocesses or writes.
+- Core code never imports niche/provider implementation modules. Depend on contracts/capabilities/interfaces.
+- Workers never open Core SQLite directly. All supported state/artifact/secret access goes through scoped Core interfaces.
+- Logging is structured and redacted. Never log secret values, Authorization headers, cookies, OAuth tokens or raw credential material.
+- Workflows contain capability IDs only; concrete provider/plugin IDs belong in Channel routing.
+- Keep Phase boundaries explicit: preserve future interfaces, but do not prematurely implement later-phase subsystems.
