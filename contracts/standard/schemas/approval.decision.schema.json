@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Approval Decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "action",
+    "actor",
+    "target",
+    "timestamp"
+  ],
+  "properties": {
+    "action": {
+      "type": "string"
+    },
+    "actor": {
+      "type": "string"
+    },
+    "target": {
+      "type": "object",
+      "required": [
+        "artifact_id",
+        "generation"
+      ],
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "comment": {
+      "type": "string"
+    },
+    "feedback": {
+      "type": "string"
+    }
+  }
+}
