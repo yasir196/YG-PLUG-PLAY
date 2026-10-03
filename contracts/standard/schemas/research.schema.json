@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Research",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "summary",
+    "sources"
+  ],
+  "properties": {
+    "summary": {
+      "type": "string"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "citation": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "notes": {
+      "type": "array"
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}
