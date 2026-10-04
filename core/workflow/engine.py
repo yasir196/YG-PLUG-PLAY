@@ -21,22 +21,17 @@ from core.database.models import (
     ProjectBrief,
     WorkflowNodeRun,
     WorkflowRun,
-    WorkflowVersion,
+)
+from core.workflow.errors import (
+    ApprovalConflictError,
+    ApprovalNotFoundError,
+    ApprovalValidationError,
+    WorkflowRuntimeError,
 )
 from core.workflow.execution import CapabilityExecution
-from core.workflow.snapshot import freeze_run_snapshot
+from core.workflow.snapshot import freeze_run_snapshot, load_snapshot_node
 
 CapabilityRunner = Callable[[str, dict[str, Any]], dict[str, Any] | CapabilityExecution]
-
-
-class WorkflowRuntimeError(RuntimeError):
-    pass
-
-
-class ApprovalValidationError(WorkflowRuntimeError):
-    """Raised when an approval decision is invalid before mutation."""
-
-    pass
 
 
 class DurableWorkflowEngine:
@@ -163,10 +158,6 @@ class DurableWorkflowEngine:
         run = self.session.get(WorkflowRun, run_id)
         if run is None:
             raise WorkflowRuntimeError("run not found")
-        wf = self.session.get(WorkflowVersion, run.workflow_version_id)
-        if wf is None:
-            raise WorkflowRuntimeError("workflow version not found")
-        node = next(n for n in json.loads(wf.definition_json)["nodes"] if n["id"] == node_id)
         q = self.session.scalar(
             select(ApprovalQueue).where(
                 ApprovalQueue.run_id == run_id,
@@ -175,7 +166,18 @@ class DurableWorkflowEngine:
             )
         )
         if q is None:
-            raise WorkflowRuntimeError("approval not waiting")
+            exists = self.session.scalar(
+                select(ApprovalQueue.id)
+                .where(
+                    ApprovalQueue.run_id == run_id,
+                    ApprovalQueue.node_id == node_id,
+                )
+                .limit(1)
+            )
+            if exists is None:
+                raise ApprovalNotFoundError("approval not found")
+            raise ApprovalConflictError("approval not waiting")
+        node = load_snapshot_node(self.session, run_id, node_id)
         action_spec = node["approval"]["actions"].get(action)
         if action_spec is None:
             raise ApprovalValidationError("approval action not allowed")
@@ -189,7 +191,7 @@ class DurableWorkflowEngine:
         )
         if kind == "edit":
             if target is None or edited_data is None:
-                raise WorkflowRuntimeError("edit requires target and data")
+                raise ApprovalValidationError("edit requires target and data")
             target = self._edit_generation(target, edited_data, actor_id)
             q.artifact_generation_id = target.id
         decision = {
