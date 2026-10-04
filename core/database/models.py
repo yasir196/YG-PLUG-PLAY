@@ -110,6 +110,7 @@ class PluginSetting(TimestampMixin, Base):
     scope_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     key: Mapped[str] = mapped_column(String(200))
     value_json: Mapped[str] = mapped_column(Text)
+    settings_schema_version: Mapped[int] = mapped_column(Integer, default=1)
 
 
 class EncryptedSecret(TimestampMixin, Base):
