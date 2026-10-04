@@ -44,7 +44,7 @@ WF = {
                 "artifact": {"from": "write.script"},
                 "actions": {
                     "publish-ok": {"kind": "approve", "next": "final"},
-                    "approve": {"kind": "reject", "next": "done"},
+                    "approve": {"kind": "approve", "next": "final"},
                     "edit": {"kind": "edit", "next": "$self"},
                 },
             },
@@ -153,7 +153,10 @@ def test_invalid_action_has_no_side_effects(tmp_path: Path):
 
 def test_action_name_approve_with_reject_kind_does_not_publish_approved(tmp_path: Path):
     workflow = deepcopy(WF)
-    workflow["nodes"][1]["approval"]["actions"]["approve"]["next"] = "rejected"
+    workflow["nodes"][1]["approval"]["actions"]["approve"] = {
+        "kind": "reject",
+        "next": "rejected",
+    }
     workflow["nodes"].append({"id": "rejected", "type": "end", "status": "rejected"})
     e, f = setup(tmp_path / "reject-kind.db", workflow)
     with f() as s:
