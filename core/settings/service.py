@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
@@ -126,7 +126,7 @@ class SettingsService:
 
     def _field(self, key: str) -> dict[str, Any]:
         try:
-            return self.fields[key]
+            return cast(dict[str, Any], self.fields[key])
         except KeyError as exc:
             raise SettingsError(f"unknown setting: {key}") from exc
 
