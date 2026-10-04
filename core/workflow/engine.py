@@ -21,22 +21,12 @@ from core.database.models import (
     ProjectBrief,
     WorkflowNodeRun,
     WorkflowRun,
-    WorkflowVersion,
 )
+from core.workflow.errors import ApprovalValidationError, WorkflowRuntimeError
 from core.workflow.execution import CapabilityExecution
-from core.workflow.snapshot import freeze_run_snapshot
+from core.workflow.snapshot import freeze_run_snapshot, load_snapshot_node
 
 CapabilityRunner = Callable[[str, dict[str, Any]], dict[str, Any] | CapabilityExecution]
-
-
-class WorkflowRuntimeError(RuntimeError):
-    pass
-
-
-class ApprovalValidationError(WorkflowRuntimeError):
-    """Raised when an approval decision is invalid before mutation."""
-
-    pass
 
 
 class DurableWorkflowEngine:
@@ -163,10 +153,7 @@ class DurableWorkflowEngine:
         run = self.session.get(WorkflowRun, run_id)
         if run is None:
             raise WorkflowRuntimeError("run not found")
-        wf = self.session.get(WorkflowVersion, run.workflow_version_id)
-        if wf is None:
-            raise WorkflowRuntimeError("workflow version not found")
-        node = next(n for n in json.loads(wf.definition_json)["nodes"] if n["id"] == node_id)
+        node = load_snapshot_node(self.session, run_id, node_id)
         q = self.session.scalar(
             select(ApprovalQueue).where(
                 ApprovalQueue.run_id == run_id,

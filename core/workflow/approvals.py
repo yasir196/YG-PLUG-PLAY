@@ -5,25 +5,18 @@ from __future__ import annotations
 import difflib
 import json
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from core.database.models import (
-    ApprovalDecision,
-    ApprovalQueue,
-    ArtifactGeneration,
-    RunSnapshot,
-)
-from core.workflow.engine import DurableWorkflowEngine, WorkflowRuntimeError
+from core.database.models import ApprovalDecision, ApprovalQueue, ArtifactGeneration
+from core.workflow.engine import DurableWorkflowEngine
+from core.workflow.errors import ApprovalNotFoundError, WorkflowRuntimeError
+from core.workflow.snapshot import load_snapshot_node
 
 
 class ApprovalAccessError(PermissionError):
-    pass
-
-
-class ApprovalNotFoundError(WorkflowRuntimeError):
     pass
 
 
@@ -104,22 +97,7 @@ class ApprovalService:
         return queue
 
     def _node(self, queue: ApprovalQueue) -> dict[str, Any]:
-        snapshot = self.session.get(RunSnapshot, queue.run_id)
-        if snapshot is None:
-            raise WorkflowRuntimeError("run snapshot missing")
-        payload = json.loads(snapshot.snapshot_json)
-        if not isinstance(payload, dict):
-            raise WorkflowRuntimeError("run snapshot must be an object")
-        workflow = payload.get("workflow")
-        if not isinstance(workflow, dict):
-            raise WorkflowRuntimeError("run snapshot workflow missing")
-        nodes = workflow.get("nodes")
-        if not isinstance(nodes, list):
-            raise WorkflowRuntimeError("run snapshot nodes missing")
-        for node in nodes:
-            if isinstance(node, dict) and node.get("id") == queue.node_id:
-                return cast(dict[str, Any], node)
-        raise WorkflowRuntimeError("approval node missing from run snapshot")
+        return load_snapshot_node(self.session, queue.run_id, queue.node_id)
 
     def _allowed(self, queue: ApprovalQueue, roles: set[str], is_admin: bool) -> bool:
         if is_admin:

@@ -16,6 +16,7 @@ from core.database.models import (
     WorkflowRun,
     WorkflowVersion,
 )
+from core.workflow.errors import ApprovalNotFoundError, WorkflowRuntimeError
 
 
 def _json_object(raw: str) -> dict[str, Any]:
@@ -23,6 +24,23 @@ def _json_object(raw: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError("snapshot JSON payload must be an object")
     return cast(dict[str, Any], value)
+
+
+def load_snapshot_node(session: Session, run_id: str, node_id: str) -> dict[str, Any]:
+    snapshot = session.get(RunSnapshot, run_id)
+    if snapshot is None:
+        raise WorkflowRuntimeError("run snapshot missing")
+    payload = _json_object(snapshot.snapshot_json)
+    workflow = payload.get("workflow")
+    if not isinstance(workflow, dict):
+        raise WorkflowRuntimeError("run snapshot workflow missing")
+    nodes = workflow.get("nodes")
+    if not isinstance(nodes, list):
+        raise WorkflowRuntimeError("run snapshot nodes missing")
+    for node in nodes:
+        if isinstance(node, dict) and node.get("id") == node_id:
+            return cast(dict[str, Any], node)
+    raise ApprovalNotFoundError("approval node missing from run snapshot")
 
 
 def freeze_run_snapshot(session: Session, run_id: str) -> dict[str, Any]:
