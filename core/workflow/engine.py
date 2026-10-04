@@ -13,9 +13,6 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from core.workflow.execution import CapabilityExecution
-from core.workflow.snapshot import freeze_run_snapshot
-
 from core.database.models import (
     ApprovalDecision,
     ApprovalQueue,
@@ -26,6 +23,8 @@ from core.database.models import (
     WorkflowRun,
     WorkflowVersion,
 )
+from core.workflow.execution import CapabilityExecution
+from core.workflow.snapshot import freeze_run_snapshot
 
 CapabilityRunner = Callable[[str, dict[str, Any]], dict[str, Any] | CapabilityExecution]
 
