@@ -985,10 +985,10 @@ Example:
 ``` json
 {
   "actions": {
-    "approve": "media-planning",
-    "edit": "stay",
-    "request-revision": "revision",
-    "reject": "end-rejected"
+    "approve": {"kind": "approve", "next": "media-planning"},
+    "edit": {"kind": "edit", "next": "$self"},
+    "request-revision": {"kind": "request-revision", "next": "revision"},
+    "reject": {"kind": "reject", "next": "end-rejected"}
   }
 }
 ```
@@ -1081,10 +1081,10 @@ Example manual approval:
       "among": ["script.script", "revision.script"]
     },
     "actions": {
-      "approve": "media-planning",
-      "edit": "stay",
-      "request-revision": "revision",
-      "reject": "end-rejected"
+      "approve": {"kind": "approve", "next": "media-planning"},
+      "edit": {"kind": "edit", "next": "$self"},
+      "request-revision": {"kind": "request-revision", "next": "revision"},
+      "reject": {"kind": "reject", "next": "end-rejected"}
     },
     "timeout_hours": 120,
     "on_timeout": {
@@ -1217,10 +1217,10 @@ Therefore both paths work.
           "among": ["script.script", "revision.script"]
         },
         "actions": {
-          "approve": "media-planning",
-          "edit": "stay",
-          "request-revision": "revision",
-          "reject": "end-rejected"
+          "approve": {"kind": "approve", "next": "media-planning"},
+          "edit": {"kind": "edit", "next": "$self"},
+          "request-revision": {"kind": "request-revision", "next": "revision"},
+          "reject": {"kind": "reject", "next": "end-rejected"}
         }
       },
       "outputs": {
@@ -1243,10 +1243,10 @@ Therefore both paths work.
           "among": ["script.script", "revision.script"]
         },
         "actions": {
-          "approve": "media-planning",
-          "edit": "stay",
-          "request-revision": "revision",
-          "reject": "end-rejected"
+          "approve": {"kind": "approve", "next": "media-planning"},
+          "edit": {"kind": "edit", "next": "$self"},
+          "request-revision": {"kind": "request-revision", "next": "revision"},
+          "reject": {"kind": "reject", "next": "end-rejected"}
         }
       },
       "outputs": {
@@ -1325,9 +1325,9 @@ Therefore both paths work.
       "approval": {
         "roles": ["producer", "channel-manager"],
         "actions": {
-          "retry-failed": "generate-images",
-          "accept-partial": "media-join",
-          "reject": "end-rejected"
+          "retry-failed": {"kind": "request-revision", "next": "generate-images"},
+          "accept-partial": {"kind": "approve", "next": "media-join"},
+          "reject": {"kind": "reject", "next": "end-rejected"}
         }
       }
     },

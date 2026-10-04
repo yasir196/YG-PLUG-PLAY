@@ -118,11 +118,18 @@ Before Phase 2 makes any paid LLM/provider call, Core must provide:
 
 These controls are Phase 2 entry requirements even though the broader budget/operations system is expanded later.
 
+## E12 — Approval action semantic kind
+
+Every human-approval action is an object with an explicit semantic `kind` and transition `next`. Allowed kinds are `approve`, `reject`, `request-revision`, and `edit`. Core behavior is determined by `kind`, never by the action key/name. An `edit` action may target `$self` and retains E4/E7 immutable-edit behavior.
+
+Phase 1a requires this format. Legacy string actions such as `"approve": "next-node"` are rejected at workflow validation/install time; there is no implicit action-name migration.
+
 ## Canonical corrections to V5 examples
 
 Apply these substitutions when implementing V5 examples:
 
-- `"edit": "stay"` → `"edit": "$self"`
+- legacy `"edit": "stay"` → `"edit": {"kind": "edit", "next": "$self"}`
+- all approval actions require explicit `{kind, next}` objects; action names carry no semantics
 - revision nodes may include optional latest `approval.decision` feedback
 - `generate-images.failed-items` is the map node's implicit failed-items output
 - `items_from: "inputs.requests.items"` → `items_from: "requests.items"`

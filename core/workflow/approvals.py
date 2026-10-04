@@ -60,11 +60,12 @@ class ApprovalService:
         actions = node["approval"]["actions"]
         if requested not in actions:
             raise WorkflowRuntimeError("approval action not allowed")
-        if requested == "request-revision" and not comment:
+        kind = actions[requested]["kind"]
+        if kind == "request-revision" and not comment:
             raise WorkflowRuntimeError("revision comment required")
 
         diff: str | None = None
-        if requested == "edit":
+        if kind == "edit":
             if edited_data is None:
                 raise WorkflowRuntimeError("edit requires data")
             old = self._artifact(queue)

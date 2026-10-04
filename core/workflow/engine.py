@@ -170,12 +170,16 @@ class DurableWorkflowEngine:
         )
         if q is None:
             raise WorkflowRuntimeError("approval not waiting")
+        action_spec = node["approval"]["actions"].get(action)
+        if action_spec is None:
+            raise WorkflowRuntimeError("approval action not allowed")
+        kind = action_spec["kind"]
         target = (
             self.session.get(ArtifactGeneration, q.artifact_generation_id)
             if q.artifact_generation_id
             else None
         )
-        if action == "edit":
+        if kind == "edit":
             if target is None or edited_data is None:
                 raise WorkflowRuntimeError("edit requires target and data")
             target = self._edit_generation(target, edited_data, actor_id)
@@ -199,7 +203,7 @@ class DurableWorkflowEngine:
                 feedback=feedback,
             )
         )
-        if action in {"approve", "approved", "final-approve"} and target:
+        if kind == "approve" and target:
             artifact = self.session.get(Artifact, target.artifact_id)
             if artifact is None:
                 raise WorkflowRuntimeError("approval artifact not found")
@@ -207,7 +211,7 @@ class DurableWorkflowEngine:
             self._publish(run_id, node_id, "approved", artifact.contract_id, data, actor_id)
         q.status = "decided"
         run.status = "running"
-        run.current_node_id = node["approval"]["actions"][action]
+        run.current_node_id = action_spec["next"]
         if run.current_node_id == "$self":
             run.current_node_id = node_id
         self.session.commit()

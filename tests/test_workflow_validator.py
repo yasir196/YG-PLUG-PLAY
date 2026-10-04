@@ -43,7 +43,7 @@ def missing_on_exhausted(w: dict[str, Any]) -> None:
 
 
 def missing_approval_target(w: dict[str, Any]) -> None:
-    node(w, "final-approval")["approval"]["actions"]["reject"] = "missing-end"
+    node(w, "final-approval")["approval"]["actions"]["reject"]["next"] = "missing-end"
 
 
 def incompatible_latest_contract(w: dict[str, Any]) -> None:
@@ -53,7 +53,7 @@ def incompatible_latest_contract(w: dict[str, Any]) -> None:
 def required_input_missing_on_branch(w: dict[str, Any]) -> None:
     # Create a real bypass path to the consumer that does not execute the
     # generate-images producer or its parallel join first.
-    node(w, "final-approval")["approval"]["actions"]["approve"] = "branch-consumer"
+    node(w, "final-approval")["approval"]["actions"]["approve"]["next"] = "branch-consumer"
     w["nodes"].append(
         {
             "id": "branch-consumer",
@@ -71,7 +71,7 @@ def old_v4_manual_review_bug(w: dict[str, Any]) -> None:
     # requires the final-approval output lineage, which that path never produces.
     manual = node(w, "manual-review")
     manual["outputs"] = {}
-    manual["approval"]["actions"]["approve"] = "media-planning"
+    manual["approval"]["actions"]["approve"]["next"] = "media-planning"
     media = node(w, "media-planning")
     media["inputs"]["script"] = {"from": "final-approval.approved-script"}
 

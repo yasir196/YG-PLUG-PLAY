@@ -56,9 +56,9 @@
           "from": "write.script"
         },
         "actions": {
-          "approve": "end-success",
-          "edit": "$self",
-          "reject": "end-rejected"
+          "approve": {"kind": "approve", "next": "end-success"},
+          "edit": {"kind": "edit", "next": "$self"},
+          "reject": {"kind": "reject", "next": "end-rejected"}
         }
       }
     },

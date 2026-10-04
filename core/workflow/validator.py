@@ -58,7 +58,8 @@ def _targets(node: Mapping[str, Any]) -> Iterable[str]:
         yield str(node["true_next"])
         yield str(node["false_next"])
     elif node_type == "human-approval":
-        for target in node.get("approval", {}).get("actions", {}).values():
+        for action in node.get("approval", {}).get("actions", {}).values():
+            target = action["next"]
             if target != "$self":
                 yield str(target)
     elif node_type == "parallel":
@@ -120,9 +121,13 @@ def _check_approval_targets(nodes: Mapping[str, Mapping[str, Any]]) -> None:
     for node_id, node in nodes.items():
         if node.get("type") != "human-approval":
             continue
-        for action, target in node.get("approval", {}).get("actions", {}).items():
+        for action_name, action in node.get("approval", {}).get("actions", {}).items():
+            target = action["next"]
             if target != "$self" and target not in nodes:
-                _fail(f"approval {node_id!r} action {action!r} targets missing node {target!r}")
+                _fail(
+                    f"approval {node_id!r} action {action_name!r} "
+                    f"targets missing node {target!r}"
+                )
 
 
 def _strong_components(edges: Mapping[str, set[str]]) -> list[set[str]]:
@@ -360,8 +365,8 @@ def _dataflow_edges(
                     result[branch].add(synthetic)
         if node.get("type") == "human-approval":
             actions = node.get("approval", {}).get("actions", {})
-            for target in actions.values():
-                if target == "$self":
+            for action in actions.values():
+                if action["next"] == "$self":
                     result[node_id].add(node_id)
     return result
 
