@@ -1,0 +1,6 @@
+{% extends "base.html" %}{% block title %}{{ channel.name }}{% endblock %}{% block content %}
+<h1>{{ channel.name }}</h1><p class="muted">Niche: {{ channel.niche_id }} {{ channel.niche_version }}</p>
+<div class="card"><a href="/dashboard/channels/{{ channel.id }}/plugins">Plugins</a></div>
+<div class="card"><a href="/dashboard/channels/{{ channel.id }}/routing">Routing</a></div>
+<div class="card"><a href="/dashboard/channels/{{ channel.id }}/projects">Projects ({{ project_count }})</a></div>
+{% endblock %}

@@ -1,0 +1,4 @@
+{% extends "base.html" %}{% block title %}Plugins{% endblock %}{% block content %}
+<h1>Plugins</h1><p><a href="/dashboard/channels/{{ channel_id }}">← Channel</a></p>
+{% for plugin in plugins %}{% set assignment = assignments.get(plugin.plugin_id) %}<div class="card"><strong>{{ plugin.plugin_id }}</strong> {{ plugin.version }}<div class="muted">SHA {{ plugin.package_sha256 }}</div><p>{{ "Enabled" if assignment and assignment.enabled else "Disabled" }}</p></div>{% else %}<p>No installed plugin versions. Installation is not yet exposed by this dashboard slice.</p>{% endfor %}
+{% endblock %}

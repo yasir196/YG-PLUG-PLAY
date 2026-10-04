@@ -1,0 +1,4 @@
+{% extends "base.html" %}{% block title %}Routing{% endblock %}{% block content %}
+<h1>Routing</h1><p><a href="/dashboard/channels/{{ channel_id }}">← Channel</a></p>
+{% for route in routes %}<div class="card"><strong>{{ route.capability }}</strong><div>{{ route.purpose or route.variant or "default" }} → {{ route.primary_plugin_id }}</div><pre>{{ route.options_json }}</pre></div>{% else %}<p>No routes.</p>{% endfor %}
+{% endblock %}

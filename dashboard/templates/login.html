@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Login · YG-PLUG-PLAY{% endblock %}
+{% block content %}
+<h1>YG-PLUG-PLAY</h1>
+{% if setup_required %}
+<div class="card"><h2>First-time admin setup</h2>
+<form method="post" action="/dashboard/setup"><label>Password (12+ characters)</label><input name="password" type="password" minlength="12" required><button>Set admin password</button></form></div>
+{% else %}
+<div class="card"><h2>Login</h2>
+<form method="post" action="/dashboard/login"><label>Password</label><input name="password" type="password" required><button>Login</button></form></div>
+{% endif %}
+{% endblock %}

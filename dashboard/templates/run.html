@@ -1,0 +1,4 @@
+{% extends "base.html" %}{% block title %}Run {{ run.id }}{% endblock %}{% block content %}
+<h1>Run</h1><div class="card"><strong id="status">{{ run.status }}</strong><div>Node: {{ run.current_node_id or "—" }}</div><pre id="progress"></pre></div>
+<script>const es=new EventSource("/api/runs/{{ run.id }}/progress");es.addEventListener("progress",e=>{document.getElementById("progress").textContent=e.data;});</script>
+{% endblock %}

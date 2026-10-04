@@ -1,16 +1,22 @@
-"""Minimal server-rendered dashboard for the Phase-1a demo flow."""
+"""Server-rendered Jinja2 + HTMX dashboard for the Phase-1a demo flow."""
 
 from __future__ import annotations
 
-import html
 import json
+import secrets
+from pathlib import Path
 from typing import Annotated, Any
+from urllib.parse import parse_qs
 
-from fastapi import APIRouter, Depends
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+from jsonschema.exceptions import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from core.auth.app import SESSION_COOKIE
+from core.auth.service import AuthService, SessionRecord
 from core.database.models import (
     ApprovalQueue,
     Channel,
@@ -21,172 +27,285 @@ from core.database.models import (
     ProjectBrief,
     WorkflowRun,
 )
+from core.workspace.service import WorkspaceService
+
+TEMPLATES = Jinja2Templates(directory=Path(__file__).with_name("templates"))
 
 
-def page(title: str, body: str) -> HTMLResponse:
-    nav = (
-        '<nav><a href="/dashboard/channels">Channels</a> · '
-        '<a href="/dashboard/approvals">Approvals</a></nav>'
-    )
-    return HTMLResponse(
-        f"<!doctype html><html><head><title>{html.escape(title)}</title>"
-        '<script src="https://unpkg.com/htmx.org@2.0.4"></script></head>'
-        f"<body>{nav}<h1>{html.escape(title)}</h1>{body}</body></html>"
-    )
+async def _form(request: Request) -> dict[str, str]:
+    raw = (await request.body()).decode("utf-8")
+    return {key: values[-1] for key, values in parse_qs(raw, keep_blank_values=True).items()}
 
 
-def build_dashboard_router(
-    session_dependency: Any, auth_dependency: Any, csrf_dependency: Any
-) -> APIRouter:
+def build_dashboard_router(session_dependency: Any, auth_service: AuthService) -> APIRouter:
     router = APIRouter(prefix="/dashboard")
 
+    def current_session(
+        session_token: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
+    ) -> SessionRecord:
+        try:
+            return auth_service.require_session(session_token)
+        except ValueError as exc:
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+    def context(request: Request, session: SessionRecord | None = None, **values: Any) -> dict[str, Any]:
+        return {"request": request, "session": session, **values}
+
+    def require_csrf(form: dict[str, str], session: SessionRecord) -> None:
+        supplied = form.get("_csrf", "")
+        if not supplied or not secrets.compare_digest(supplied, session.csrf_token):
+            raise HTTPException(status_code=403, detail="invalid CSRF token")
+
+    @router.get("", include_in_schema=False)
+    def root() -> RedirectResponse:
+        return RedirectResponse("/dashboard/channels", status_code=303)
+
     @router.get("/login", response_class=HTMLResponse)
-    def login() -> HTMLResponse:
-        return page(
-            "Login",
-            '<form method="post" action="/auth/login">'
-            '<input name="password" type="password"><button>Login</button></form>',
+    def login(request: Request) -> HTMLResponse:
+        return TEMPLATES.TemplateResponse(
+            request,
+            "login.html",
+            context(request, setup_required=auth_service.setup_required),
         )
 
-    @router.get("/channels", dependencies=[Depends(auth_dependency)])
-    def channels(s: Annotated[Session, Depends(session_dependency)]) -> HTMLResponse:
-        rows = s.scalars(select(Channel)).all()
-        body = "".join(
-            f'<p><a href="/dashboard/channels/{item.id}">{html.escape(item.name)}</a></p>'
-            for item in rows
-        )
-        return page("Channels", body)
+    @router.post("/setup")
+    async def setup(request: Request) -> RedirectResponse:
+        form = await _form(request)
+        try:
+            auth_service.setup_admin(form.get("password", ""))
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return RedirectResponse("/dashboard/login", status_code=303)
 
-    @router.get("/channels/{cid}", dependencies=[Depends(auth_dependency)])
-    def channel(cid: str, s: Annotated[Session, Depends(session_dependency)]) -> HTMLResponse:
-        item = s.get(Channel, cid)
-        links = (
-            f"<p>Niche: {html.escape(item.niche_id or '')}</p>"
-            f'<p><a href="/dashboard/channels/{cid}/plugins">Plugins</a> · '
-            f'<a href="/dashboard/channels/{cid}/routing">Routing</a> · '
-            f'<a href="/dashboard/channels/{cid}/projects">Projects</a></p>'
+    @router.post("/login")
+    async def login_submit(request: Request) -> RedirectResponse:
+        form = await _form(request)
+        try:
+            token, _csrf = auth_service.authenticate(form.get("password", ""))
+        except ValueError as exc:
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
+        response = RedirectResponse("/dashboard/channels", status_code=303)
+        response.set_cookie(
+            SESSION_COOKIE, token, httponly=True, secure=False, samesite="strict", path="/"
         )
-        return page(item.name, links)
+        return response
 
-    @router.get("/channels/{cid}/plugins", dependencies=[Depends(auth_dependency)])
-    def plugins(cid: str, s: Annotated[Session, Depends(session_dependency)]) -> HTMLResponse:
-        rows = s.scalars(select(PluginVersion)).all()
+    @router.post("/logout")
+    async def logout(
+        request: Request,
+        session_token: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
+        session: Annotated[SessionRecord, Depends(current_session)] = None,
+    ) -> RedirectResponse:
+        form = await _form(request)
+        require_csrf(form, session)
+        auth_service.logout(session_token)
+        response = RedirectResponse("/dashboard/login", status_code=303)
+        response.delete_cookie(SESSION_COOKIE, path="/")
+        return response
+
+    @router.get("/channels", response_class=HTMLResponse)
+    def channels(
+        request: Request,
+        session: Annotated[SessionRecord, Depends(current_session)],
+        db: Annotated[Session, Depends(session_dependency)],
+    ) -> HTMLResponse:
+        rows = db.scalars(select(Channel).order_by(Channel.created_at)).all()
+        return TEMPLATES.TemplateResponse(
+            request, "channels.html", context(request, session, channels=rows)
+        )
+
+    @router.post("/channels")
+    async def create_channel(
+        request: Request,
+        session: Annotated[SessionRecord, Depends(current_session)],
+        db: Annotated[Session, Depends(session_dependency)],
+    ) -> RedirectResponse:
+        form = await _form(request)
+        require_csrf(form, session)
+        service = WorkspaceService(db)
+        try:
+            channel = service.create_channel(
+                form.get("name", ""), form.get("niche_id", ""), form.get("niche_version", "")
+            )
+            db.commit()
+        except ValueError as exc:
+            db.rollback()
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return RedirectResponse(f"/dashboard/channels/{channel.id}", status_code=303)
+
+    @router.get("/channels/{cid}", response_class=HTMLResponse)
+    def channel(
+        cid: str,
+        request: Request,
+        session: Annotated[SessionRecord, Depends(current_session)],
+        db: Annotated[Session, Depends(session_dependency)],
+    ) -> HTMLResponse:
+        item = db.get(Channel, cid)
+        if item is None:
+            raise HTTPException(status_code=404, detail="channel not found")
+        project_count = len(
+            db.scalars(select(Project).where(Project.channel_id == cid)).all()
+        )
+        return TEMPLATES.TemplateResponse(
+            request,
+            "channel.html",
+            context(request, session, channel=item, project_count=project_count),
+        )
+
+    @router.get("/channels/{cid}/plugins", response_class=HTMLResponse)
+    def plugins(
+        cid: str,
+        request: Request,
+        session: Annotated[SessionRecord, Depends(current_session)],
+        db: Annotated[Session, Depends(session_dependency)],
+    ) -> HTMLResponse:
+        if db.get(Channel, cid) is None:
+            raise HTTPException(status_code=404, detail="channel not found")
+        rows = db.scalars(select(PluginVersion).order_by(PluginVersion.plugin_id)).all()
         assignments = {
             item.plugin_id: item
-            for item in s.scalars(
+            for item in db.scalars(
                 select(ChannelPluginAssignment).where(ChannelPluginAssignment.channel_id == cid)
             )
         }
-        body = "".join(
-            f"<section><b>{html.escape(item.plugin_id)} {html.escape(item.version)}</b> — "
-            f"{'enabled' if assignments.get(item.plugin_id) and assignments[item.plugin_id].enabled else 'disabled'}"
-            f'<p><a href="/dashboard/channels/{cid}/plugins/{item.plugin_id}/settings">'
-            "Settings</a></p></section>"
-            for item in rows
+        return TEMPLATES.TemplateResponse(
+            request,
+            "plugins.html",
+            context(request, session, channel_id=cid, plugins=rows, assignments=assignments),
         )
-        return page("Plugins", body)
 
-    @router.get(
-        "/channels/{cid}/plugins/{pid}/settings",
-        dependencies=[Depends(auth_dependency)],
-    )
-    def settings(
+    @router.get("/channels/{cid}/routing", response_class=HTMLResponse)
+    def routing(
         cid: str,
-        pid: str,
-        s: Annotated[Session, Depends(session_dependency)],
+        request: Request,
+        session: Annotated[SessionRecord, Depends(current_session)],
+        db: Annotated[Session, Depends(session_dependency)],
     ) -> HTMLResponse:
-        plugin_version = s.scalar(
-            select(PluginVersion)
-            .where(PluginVersion.plugin_id == pid)
-            .order_by(PluginVersion.id.desc())
-        )
-        manifest = json.loads(plugin_version.manifest_json)
-        path = manifest.get("settings_schema", "")
-        return page(
-            "Plugin settings",
-            f"<p>Schema: {html.escape(str(path))}</p>"
-            f'<form hx-post="/dashboard/channels/{cid}/plugins/{pid}/settings">'
-            '<div id="schema-fields">'
-            "Settings are rendered from the installed plugin settings schema."
-            "</div><button>Save</button></form>",
+        rows = db.scalars(
+            select(ChannelRoute).where(ChannelRoute.channel_id == cid).order_by(ChannelRoute.id)
+        ).all()
+        return TEMPLATES.TemplateResponse(
+            request, "routing.html", context(request, session, channel_id=cid, routes=rows)
         )
 
-    @router.get("/channels/{cid}/routing", dependencies=[Depends(auth_dependency)])
-    def routing(cid: str, s: Annotated[Session, Depends(session_dependency)]) -> HTMLResponse:
-        rows = s.scalars(select(ChannelRoute).where(ChannelRoute.channel_id == cid)).all()
-        return page(
-            "Routing",
-            "".join(
-                f"<p>{html.escape(item.capability)} / "
-                f"{html.escape(item.purpose or item.variant or 'default')} → "
-                f"{html.escape(item.primary_plugin_id)} {html.escape(item.options_json)}</p>"
-                for item in rows
-            ),
+    @router.get("/channels/{cid}/projects", response_class=HTMLResponse)
+    def projects(
+        cid: str,
+        request: Request,
+        session: Annotated[SessionRecord, Depends(current_session)],
+        db: Annotated[Session, Depends(session_dependency)],
+    ) -> HTMLResponse:
+        service = WorkspaceService(db)
+        try:
+            rows = service.list_projects(cid)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return TEMPLATES.TemplateResponse(
+            request, "projects.html", context(request, session, channel_id=cid, projects=rows)
         )
 
-    @router.get("/channels/{cid}/projects", dependencies=[Depends(auth_dependency)])
-    def projects(cid: str, s: Annotated[Session, Depends(session_dependency)]) -> HTMLResponse:
-        rows = s.scalars(select(Project).where(Project.channel_id == cid)).all()
-        return page(
-            "Projects",
-            "".join(
-                f'<p><a href="/dashboard/projects/{item.id}">{html.escape(item.title)}</a></p>'
-                for item in rows
-            ),
-        )
+    @router.post("/channels/{cid}/projects")
+    async def create_project(
+        cid: str,
+        request: Request,
+        session: Annotated[SessionRecord, Depends(current_session)],
+        db: Annotated[Session, Depends(session_dependency)],
+    ) -> RedirectResponse:
+        form = await _form(request)
+        require_csrf(form, session)
+        service = WorkspaceService(db)
+        try:
+            project = service.create_project(cid, form.get("title", ""))
+            db.commit()
+        except ValueError as exc:
+            db.rollback()
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return RedirectResponse(f"/dashboard/projects/{project.id}", status_code=303)
 
-    @router.get("/projects/{pid}", dependencies=[Depends(auth_dependency)])
-    def project(pid: str, s: Annotated[Session, Depends(session_dependency)]) -> HTMLResponse:
-        item = s.get(Project, pid)
-        brief = s.scalar(
+    @router.get("/projects/{pid}", response_class=HTMLResponse)
+    def project(
+        pid: str,
+        request: Request,
+        session: Annotated[SessionRecord, Depends(current_session)],
+        db: Annotated[Session, Depends(session_dependency)],
+    ) -> HTMLResponse:
+        item = db.get(Project, pid)
+        if item is None:
+            raise HTTPException(status_code=404, detail="project not found")
+        brief = db.scalar(
             select(ProjectBrief)
             .where(ProjectBrief.project_id == pid)
             .order_by(ProjectBrief.generation.desc())
         )
-        runs = s.scalars(select(WorkflowRun).where(WorkflowRun.project_id == pid)).all()
-        return page(
-            item.title,
-            f"<h2>Brief</h2><pre>{html.escape(brief.data_json if brief else '{}')}</pre>"
-            + "".join(
-                f'<p><a href="/dashboard/runs/{run.id}">Run {run.id}</a> — {run.status}</p>'
-                for run in runs
-            ),
+        runs = db.scalars(
+            select(WorkflowRun).where(WorkflowRun.project_id == pid).order_by(WorkflowRun.created_at)
+        ).all()
+        brief_data = json.loads(brief.data_json) if brief else {}
+        return TEMPLATES.TemplateResponse(
+            request,
+            "project.html",
+            context(request, session, project=item, brief=brief, brief_data=brief_data, runs=runs),
         )
 
-    @router.get("/runs/{rid}", dependencies=[Depends(auth_dependency)])
-    def run(rid: str, s: Annotated[Session, Depends(session_dependency)]) -> HTMLResponse:
-        item = s.get(WorkflowRun, rid)
-        return page(
-            "Run",
-            f'<p id="status">{html.escape(item.status)}</p><div id="progress"></div>'
-            f'<script>const es=new EventSource("/api/runs/{rid}/progress");'
-            'es.addEventListener("progress",e=>'
-            'document.getElementById("progress").textContent=e.data);</script>',
+    @router.post("/projects/{pid}/brief")
+    async def save_brief(
+        pid: str,
+        request: Request,
+        session: Annotated[SessionRecord, Depends(current_session)],
+        db: Annotated[Session, Depends(session_dependency)],
+    ) -> RedirectResponse:
+        form = await _form(request)
+        require_csrf(form, session)
+        metadata_text = form.get("metadata", "{}")
+        try:
+            metadata = json.loads(metadata_text)
+        except json.JSONDecodeError as exc:
+            raise HTTPException(status_code=422, detail="metadata must be valid JSON") from exc
+        data = {
+            "title": form.get("title", ""),
+            "topic": form.get("topic", ""),
+            "goal": form.get("goal", ""),
+            "language": form.get("language", ""),
+            "metadata": metadata,
+        }
+        try:
+            WorkspaceService(db).save_brief(pid, data)
+            db.commit()
+        except ValidationError as exc:
+            db.rollback()
+            raise HTTPException(status_code=422, detail=exc.message) from exc
+        except ValueError as exc:
+            db.rollback()
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return RedirectResponse(f"/dashboard/projects/{pid}", status_code=303)
+
+    @router.get("/runs/{rid}", response_class=HTMLResponse)
+    def run(
+        rid: str,
+        request: Request,
+        session: Annotated[SessionRecord, Depends(current_session)],
+        db: Annotated[Session, Depends(session_dependency)],
+    ) -> HTMLResponse:
+        item = db.get(WorkflowRun, rid)
+        if item is None:
+            raise HTTPException(status_code=404, detail="run not found")
+        return TEMPLATES.TemplateResponse(
+            request, "run.html", context(request, session, run=item)
         )
 
-    @router.get("/approvals", dependencies=[Depends(auth_dependency)])
-    def approvals(s: Annotated[Session, Depends(session_dependency)]) -> HTMLResponse:
-        rows = s.scalars(select(ApprovalQueue).where(ApprovalQueue.status == "waiting")).all()
-        return page(
-            "Approvals",
-            "".join(
-                f'<p><a href="/dashboard/approvals/{item.id}">'
-                f"Run {item.run_id} / {item.node_id}</a></p>"
-                for item in rows
-            ),
-        )
-
-    @router.get("/approvals/{qid}", dependencies=[Depends(auth_dependency)])
-    def approval(qid: int, s: Annotated[Session, Depends(session_dependency)]) -> HTMLResponse:
-        item = s.get(ApprovalQueue, qid)
-        return page(
-            "Approval",
-            f"<p>Run {html.escape(item.run_id)} / {html.escape(item.node_id)}</p>"
-            f'<form hx-post="/api/approvals/{qid}/actions">'
-            '<button name="action" value="approve">Approve</button>'
-            '<button name="action" value="reject">Reject</button>'
-            '<textarea name="comment"></textarea>'
-            '<button name="action" value="request-revision">Request revision</button></form>',
+    @router.get("/approvals", response_class=HTMLResponse)
+    def approvals(
+        request: Request,
+        session: Annotated[SessionRecord, Depends(current_session)],
+        db: Annotated[Session, Depends(session_dependency)],
+    ) -> HTMLResponse:
+        rows = db.scalars(
+            select(ApprovalQueue)
+            .where(ApprovalQueue.status == "waiting")
+            .order_by(ApprovalQueue.id)
+        ).all()
+        return TEMPLATES.TemplateResponse(
+            request, "approvals.html", context(request, session, approvals=rows)
         )
 
     return router
