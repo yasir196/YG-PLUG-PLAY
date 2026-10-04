@@ -56,9 +56,9 @@ class ApprovalService:
         edited_data: Any = None,
     ) -> str:
         queue = self._queue(queue_id)
+        self._require(queue, actor_roles, is_admin)
         if queue.status != "waiting":
             raise ApprovalConflictError("approval not waiting")
-        self._require(queue, actor_roles, is_admin)
         node = self._node(queue)
         requested = action
         actions = node["approval"]["actions"]
