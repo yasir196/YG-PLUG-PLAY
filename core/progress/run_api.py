@@ -1,28 +1,69 @@
 """Run-level SSE progress stream."""
+
 from __future__ import annotations
+
 import json
+from collections.abc import Callable, Iterator
 from queue import Empty
-from fastapi import APIRouter,Depends
+from typing import Any
+
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
-from core.database.models import Job
+from sqlalchemy.orm import Session
 
-def build_run_progress_router(progress,session_dependency,auth_dependency):
- r=APIRouter(prefix="/api")
- @r.get("/runs/{run_id}/progress",dependencies=[Depends(auth_dependency)])
- def stream(run_id:str,session=Depends(session_dependency)):
-  jobs=list(session.scalars(select(Job).where(Job.run_id==run_id)))
-  def events():
-   subscriptions=[(j.id,progress.subscribe(j.id)) for j in jobs]
-   try:
-    yield "event: ready\\ndata: "+json.dumps({"run_id":run_id})+"\\n\\n"
-    while True:
-     sent=False
-     for job_id,q in subscriptions:
-      try:item=q.get(timeout=.25);yield "event: progress\\ndata: "+json.dumps(item,separators=(",",":"))+"\\n\\n";sent=True
-      except Empty:pass
-     if not sent:yield ": keepalive\\n\\n"
-   finally:
-    for job_id,q in subscriptions:progress.unsubscribe(job_id,q)
-  return StreamingResponse(events(),media_type="text/event-stream",headers={"Cache-Control":"no-cache"})
- return r
+from core.database.models import Job
+from core.progress.service import ProgressService
+
+
+def build_run_progress_router(
+    progress: ProgressService,
+    session_dependency: Callable[..., Session],
+    auth_dependency: Callable[..., Any],
+) -> APIRouter:
+    router = APIRouter(prefix="/api")
+
+    @router.get(
+        "/runs/{run_id}/progress", dependencies=[Depends(auth_dependency)]
+    )
+    def stream(
+        run_id: str, session: Session = Depends(session_dependency)
+    ) -> StreamingResponse:
+        jobs = list(session.scalars(select(Job).where(Job.run_id == run_id)))
+
+        def events() -> Iterator[str]:
+            subscriptions = [
+                (job.id, progress.subscribe(job.id)) for job in jobs
+            ]
+            try:
+                yield (
+                    "event: ready\ndata: "
+                    + json.dumps({"run_id": run_id})
+                    + "\n\n"
+                )
+                while True:
+                    sent = False
+                    for job_id, subscriber in subscriptions:
+                        try:
+                            item = subscriber.get(timeout=0.25)
+                            yield (
+                                "event: progress\ndata: "
+                                + json.dumps(item, separators=(",", ":"))
+                                + "\n\n"
+                            )
+                            sent = True
+                        except Empty:
+                            pass
+                    if not sent:
+                        yield ": keepalive\n\n"
+            finally:
+                for job_id, subscriber in subscriptions:
+                    progress.unsubscribe(job_id, subscriber)
+
+        return StreamingResponse(
+            events(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache"},
+        )
+
+    return router
