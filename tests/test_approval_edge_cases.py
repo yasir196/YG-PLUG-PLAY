@@ -26,8 +26,7 @@ from core.database.models import (
     WorkflowRun,
     WorkflowVersion,
 )
-from core.workflow import ApprovalNotFoundError, ApprovalValidationError
-from core.workflow import DurableWorkflowEngine
+from core.workflow import ApprovalNotFoundError, ApprovalValidationError, DurableWorkflowEngine
 from core.workflow.approval_api import build_approval_router
 from core.workflow.approvals import ApprovalService
 
@@ -78,9 +77,7 @@ def setup_run(tmp_path: Path) -> tuple[Any, Session, DurableWorkflowEngine, int]
     session.add(Project(id="p", channel_id="c", title="P"))
     session.flush()
     session.add(ProjectBrief(id="b", project_id="p", generation=1, data_json="{}"))
-    version = WorkflowVersion(
-        workflow_id="w", version=1, definition_json=json.dumps(WF)
-    )
+    version = WorkflowVersion(workflow_id="w", version=1, definition_json=json.dumps(WF))
     session.add(version)
     session.flush()
     session.add(
@@ -93,14 +90,10 @@ def setup_run(tmp_path: Path) -> tuple[Any, Session, DurableWorkflowEngine, int]
         )
     )
     session.commit()
-    workflow = DurableWorkflowEngine(
-        session, tmp_path / "artifacts", lambda c, i: {"script": "draft"}
-    )
+    workflow = DurableWorkflowEngine(session, tmp_path / "artifacts", lambda c, i: {"script": "draft"})
     assert workflow.resume("r") == "waiting-approval"
     queue = session.scalar(
-        select(ApprovalQueue).where(
-            ApprovalQueue.run_id == "r", ApprovalQueue.node_id == "review"
-        )
+        select(ApprovalQueue).where(ApprovalQueue.run_id == "r", ApprovalQueue.node_id == "review")
     )
     assert queue is not None
     return engine, session, workflow, queue.id
@@ -136,15 +129,11 @@ def test_second_action_on_decided_queue_returns_409_without_mutation(tmp_path: P
     try:
         service = ApprovalService(session, workflow)
         client = api_client(service)
-        first = client.post(
-            f"/api/approvals/{queue_id}/actions", json={"action": "approve"}
-        )
+        first = client.post(f"/api/approvals/{queue_id}/actions", json={"action": "approve"})
         assert first.status_code == 200
         before = mutation_state(session, queue_id)
 
-        second = client.post(
-            f"/api/approvals/{queue_id}/actions", json={"action": "approve"}
-        )
+        second = client.post(f"/api/approvals/{queue_id}/actions", json={"action": "approve"})
 
         assert second.status_code == 409
         assert_no_mutation(session, queue_id, before)
