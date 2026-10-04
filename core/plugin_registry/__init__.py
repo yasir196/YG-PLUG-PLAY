@@ -1,5 +1,5 @@
-"""Plugin registry boundary models."""
+"""Safe package installation."""
 
-from .manifest import PluginManifest
+from .installer import InstallError, InstalledPackage, ZipInstaller
 
-__all__ = ["PluginManifest"]
+__all__ = ["InstallError", "InstalledPackage", "ZipInstaller"]
