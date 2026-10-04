@@ -1,4 +1,9 @@
 {% extends "base.html" %}{% block title %}Plugins{% endblock %}{% block content %}
 <h1>Plugins</h1><p><a href="/dashboard/channels/{{ channel_id }}">← Channel</a></p>
-{% for plugin in plugins %}{% set assignment = assignments.get(plugin.plugin_id) %}<div class="card"><strong>{{ plugin.plugin_id }}</strong> {{ plugin.version }}<div class="muted">SHA {{ plugin.package_sha256 }}</div><p>{{ "Enabled" if assignment and assignment.enabled else "Disabled" }}</p></div>{% else %}<p>No installed plugin versions. Installation is not yet exposed by this dashboard slice.</p>{% endfor %}
+{% for plugin in plugins %}{% set assignment = assignments.get(plugin.plugin_id) %}{% set is_trusted = (plugin.plugin_id, plugin.version, plugin.package_sha256) in trusted %}
+<div class="card"><strong>{{ plugin.plugin_id }}</strong> {{ plugin.version }}<div class="muted">SHA {{ plugin.package_sha256 }}</div>
+<p>Trust: {{ "trusted" if is_trusted else "not trusted" }} · Channel: {{ "enabled" if assignment and assignment.enabled else "disabled" }}</p>
+{% if not is_trusted %}<form method="post" action="/dashboard/channels/{{ channel_id }}/plugins/{{ plugin.plugin_id }}/{{ plugin.version }}/{{ plugin.package_sha256 }}/trust"><input type="hidden" name="_csrf" value="{{ session.csrf_token }}"><button>Grant SHA-bound trust</button></form>{% endif %}
+{% if is_trusted %}<form method="post" action="/dashboard/channels/{{ channel_id }}/plugins/{{ plugin.plugin_id }}/{{ plugin.version }}/{{ plugin.package_sha256 }}/assignment"><input type="hidden" name="_csrf" value="{{ session.csrf_token }}"><input type="hidden" name="enabled" value="{{ 'false' if assignment and assignment.enabled else 'true' }}"><button>{{ "Disable for Channel" if assignment and assignment.enabled else "Enable for Channel" }}</button></form>{% endif %}
+</div>{% else %}<p>No installed plugin versions. Installation is not yet exposed by this dashboard slice.</p>{% endfor %}
 {% endblock %}
