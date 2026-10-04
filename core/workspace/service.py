@@ -11,6 +11,7 @@ from jsonschema import Draft202012Validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from core.audit import AuditEvent, AuditService
 from core.database.models import Channel, Niche, Project, ProjectBrief
 from core.workspace.defaults import materialize_demo_defaults
 
@@ -21,8 +22,11 @@ BRIEF_SCHEMA = json.loads(
 
 
 class WorkspaceService:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, actor: str = "admin", correlation_id: str | None = None) -> None:
         self.session = session
+        self.actor = actor
+        self.correlation_id = correlation_id
+        self.audit = AuditService(session)
 
     def create_channel(self, name: str, niche_id: str, niche_version: str) -> Channel:
         niche = self.session.get(Niche, niche_id)
@@ -41,6 +45,7 @@ class WorkspaceService:
         self.session.flush()
         if niche_id == "demo":
             materialize_demo_defaults(self.session, channel.id, ROOT)
+        self.audit.record(AuditEvent(self.actor, "channel.create", "channel", channel.id, correlation_id=self.correlation_id))
         return channel
 
     def list_channels(self) -> list[Channel]:
@@ -57,6 +62,7 @@ class WorkspaceService:
         project = Project(id=uuid.uuid4().hex, channel_id=channel_id, title=title)
         self.session.add(project)
         self.session.flush()
+        self.audit.record(AuditEvent(self.actor, "project.create", "project", project.id, correlation_id=self.correlation_id))
         return project
 
     def list_projects(self, channel_id: str) -> list[Project]:
@@ -91,6 +97,7 @@ class WorkspaceService:
         )
         self.session.add(brief)
         self.session.flush()
+        self.audit.record(AuditEvent(self.actor, "project-brief.write", "project-brief", brief.id, correlation_id=self.correlation_id))
         return brief
 
     def open_brief(self, project_id: str) -> ProjectBrief:
