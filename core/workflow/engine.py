@@ -71,10 +71,20 @@ class DurableWorkflowEngine:
 
     def _next(self, node: dict[str, Any], attempt: int) -> str | None:
         loop=node.get("loop_control")
-        if node.get("next")=="$self":
-            if loop and attempt>=loop["max_attempts"]: return loop["on_exhausted"]
-            return node["id"]
-        return node.get("next")
+        if node.get("next") == "$self":
+            if loop and attempt >= loop["max_attempts"]:
+                exhausted = loop["on_exhausted"]
+                if not isinstance(exhausted, str):
+                    raise WorkflowRuntimeError("loop on_exhausted target must be a string")
+                return exhausted
+            node_id = node["id"]
+            if not isinstance(node_id, str):
+                raise WorkflowRuntimeError("node id must be a string")
+            return node_id
+        next_id = node.get("next")
+        if next_id is not None and not isinstance(next_id, str):
+            raise WorkflowRuntimeError("next target must be a string")
+        return next_id
 
     def _condition(self, run: WorkflowRun, node: dict[str, Any]) -> None:
         data={k:self._select(run.id,s) for k,s in node["inputs"].items()}
@@ -187,9 +197,10 @@ class DurableWorkflowEngine:
         if not isinstance(expr,dict): return expr
         op,args=next(iter(expr.items())); args=args if isinstance(args,list) else [args]
         vals=[self._logic(a,data) for a in args]
-        if op=="var":
-            cur=data
-            for part in str(args[0]).split("."): cur=cur.get(part) if isinstance(cur,dict) else None
+        if op == "var":
+            cur: Any = data
+            for part in str(args[0]).split("."):
+                cur = cur.get(part) if isinstance(cur, dict) else None
             return cur
         if op=="==": return vals[0]==vals[1]
         if op=="!=": return vals[0]!=vals[1]
