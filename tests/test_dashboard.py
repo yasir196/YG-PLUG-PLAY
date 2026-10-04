@@ -22,11 +22,15 @@ def test_dashboard_requires_login_and_supports_first_time_setup(tmp_path: Path) 
     assert page.status_code == 200
     assert "First-time admin setup" in page.text
     setup = client.post(
-        "/dashboard/setup", data={"password": "correct horse battery staple"}, follow_redirects=False
+        "/dashboard/setup",
+        data={"password": "correct horse battery staple"},
+        follow_redirects=False,
     )
     assert setup.status_code == 303
     login = client.post(
-        "/dashboard/login", data={"password": "correct horse battery staple"}, follow_redirects=False
+        "/dashboard/login",
+        data={"password": "correct horse battery staple"},
+        follow_redirects=False,
     )
     assert login.status_code == 303
     assert "yg_session" in login.cookies

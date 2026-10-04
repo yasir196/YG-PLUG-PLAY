@@ -147,9 +147,7 @@ def build_dashboard_router(session_dependency: Any, auth_service: AuthService) -
         item = db.get(Channel, cid)
         if item is None:
             raise HTTPException(status_code=404, detail="channel not found")
-        project_count = len(
-            db.scalars(select(Project).where(Project.channel_id == cid)).all()
-        )
+        project_count = len(db.scalars(select(Project).where(Project.channel_id == cid)).all())
         return TEMPLATES.TemplateResponse(
             request,
             "channel.html",
@@ -345,7 +343,9 @@ def build_dashboard_router(session_dependency: Any, auth_service: AuthService) -
             .order_by(ProjectBrief.generation.desc())
         )
         runs = db.scalars(
-            select(WorkflowRun).where(WorkflowRun.project_id == pid).order_by(WorkflowRun.created_at)
+            select(WorkflowRun)
+            .where(WorkflowRun.project_id == pid)
+            .order_by(WorkflowRun.created_at)
         ).all()
         brief_data = json.loads(brief.data_json) if brief else {}
         return TEMPLATES.TemplateResponse(
@@ -396,9 +396,7 @@ def build_dashboard_router(session_dependency: Any, auth_service: AuthService) -
         item = db.get(WorkflowRun, rid)
         if item is None:
             raise HTTPException(status_code=404, detail="run not found")
-        return TEMPLATES.TemplateResponse(
-            request, "run.html", context(request, session, run=item)
-        )
+        return TEMPLATES.TemplateResponse(request, "run.html", context(request, session, run=item))
 
     @router.get("/approvals", response_class=HTMLResponse)
     def approvals(
