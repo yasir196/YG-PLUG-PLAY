@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from core.database.models import Channel, Niche, Project, ProjectBrief
+from core.workspace.defaults import materialize_demo_defaults
 
 ROOT = Path(__file__).resolve().parents[2]
 BRIEF_SCHEMA = json.loads(
@@ -38,6 +39,8 @@ class WorkspaceService:
         )
         self.session.add(channel)
         self.session.flush()
+        if niche_id == "demo":
+            materialize_demo_defaults(self.session, channel.id, ROOT)
         return channel
 
     def list_channels(self) -> list[Channel]:
