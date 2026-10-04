@@ -11,7 +11,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-PLUGIN_ID = r"^(?!(?:core|system|project|channel|yg)$)(?!yg-)[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+PLUGIN_ID = r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
 KEBAB_ID = r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
 CAPABILITY_ID = r"^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*/)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
 CONTRACT_ID = (
@@ -145,6 +145,12 @@ class PluginManifest(StrictModel):
     events: Events | None = None
     settings_schema: str | None = None
     namespace_delegations_requested: list[KebabId] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_plugin_id_namespace(self) -> PluginManifest:
+        if self.id in {"core", "system", "project", "channel", "yg"} or self.id.startswith("yg-"):
+            raise ValueError("plugin id uses a reserved Core/first-party namespace")
+        return self
 
     @model_validator(mode="after")
     def niche_manifest_cannot_use_wildcard(self) -> PluginManifest:
