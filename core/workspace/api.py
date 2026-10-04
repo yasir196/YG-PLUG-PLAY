@@ -10,7 +10,6 @@ from jsonschema.exceptions import ValidationError
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from core.database.engine import session_factory
 from core.database.models import Channel, Project
 from core.workspace.service import WorkspaceService
 
