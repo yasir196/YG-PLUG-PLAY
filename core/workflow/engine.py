@@ -162,11 +162,20 @@ class DurableWorkflowEngine:
             select(ApprovalQueue).where(
                 ApprovalQueue.run_id == run_id,
                 ApprovalQueue.node_id == node_id,
+                ApprovalQueue.status == "waiting",
             )
         )
         if q is None:
-            raise ApprovalNotFoundError("approval not found")
-        if q.status != "waiting":
+            exists = self.session.scalar(
+                select(ApprovalQueue.id)
+                .where(
+                    ApprovalQueue.run_id == run_id,
+                    ApprovalQueue.node_id == node_id,
+                )
+                .limit(1)
+            )
+            if exists is None:
+                raise ApprovalNotFoundError("approval not found")
             raise ApprovalConflictError("approval not waiting")
         node = load_snapshot_node(self.session, run_id, node_id)
         action_spec = node["approval"]["actions"].get(action)
