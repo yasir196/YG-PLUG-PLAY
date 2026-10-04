@@ -10,7 +10,7 @@ import time
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any, IO, Protocol, cast
 
 _ALLOWED_ENV = ("SYSTEMROOT", "WINDIR", "COMSPEC", "TEMP", "TMP", "PATH", "PATHEXT")
 
@@ -133,7 +133,7 @@ class WorkerProcess:
         result: list[str] = []
         error: list[BaseException] = []
 
-        stdout: TextIO = process.stdout
+        stdout: IO[str] = process.stdout
 
         def read() -> None:
             try:
@@ -153,6 +153,17 @@ class WorkerProcess:
             code = process.poll()
             raise WorkerCrashed(f"worker exited unexpectedly ({code})")
         return result[0]
+
+
+class _WindowsPopen(Protocol):
+    _handle: int
+
+
+def _windows_process_handle(process: subprocess.Popen[str]) -> int:
+    handle = getattr(process, "_handle", None)
+    if not isinstance(handle, int):
+        raise WorkerError("Windows subprocess handle unavailable")
+    return cast(_WindowsPopen, process)._handle
 
 
 def _attach_kill_on_close_job(process: subprocess.Popen[str]) -> object | None:
@@ -197,7 +208,7 @@ def _attach_kill_on_close_job(process: subprocess.Popen[str]) -> object | None:
     if not kernel32.SetInformationJobObject(job, 9, ctypes.byref(info), ctypes.sizeof(info)):
         kernel32.CloseHandle(job)
         raise WorkerError("SetInformationJobObject failed")
-    process_handle = wintypes.HANDLE(int(process._handle))
+    process_handle = wintypes.HANDLE(_windows_process_handle(process))
     if not kernel32.AssignProcessToJobObject(job, process_handle):
         kernel32.CloseHandle(job)
         raise WorkerError("AssignProcessToJobObject failed")
