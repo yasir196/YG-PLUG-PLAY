@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from core.database.models import Plugin, PluginVersion
 from core.plugin_registry.manifest import PluginManifest
+from core.plugin_registry.registries import RuntimeRegistries
 
 MAX_FILES = 500
 MAX_FILE_BYTES = 25 * 1024 * 1024
@@ -59,10 +60,14 @@ class ZipInstaller:
             destination = self.packages_root / kind / manifest.id / manifest.version / digest
             if destination.exists():
                 self._persist(manifest, digest)
+                if self.session is not None:
+                    RuntimeRegistries(self.session, self.schema_path.parent).populate(manifest, destination)
                 return InstalledPackage(manifest, digest, destination)
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copytree(stage, destination)
         self._persist(manifest, digest)
+        if self.session is not None:
+            RuntimeRegistries(self.session, self.schema_path.parent).populate(manifest, destination)
         return InstalledPackage(manifest, digest, destination)
 
     def _validate_members(self, infos: list[zipfile.ZipInfo]) -> None:
