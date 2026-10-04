@@ -21,11 +21,12 @@ class SessionRecord:
 
 
 class AuthService:
-    def __init__(self, ttl: timedelta = SESSION_TTL) -> None:
+    def __init__(self, ttl: timedelta = SESSION_TTL, audit_callback: object | None = None) -> None:
         self._hasher = PasswordHasher()
         self._password_hash: str | None = None
         self._sessions: dict[str, SessionRecord] = {}
         self._ttl = ttl
+        self._audit_callback = audit_callback
 
     @property
     def setup_required(self) -> bool:
@@ -37,6 +38,7 @@ class AuthService:
         if len(password) < 12:
             raise ValueError("password must be at least 12 characters")
         self._password_hash = self._hasher.hash(password)
+        self._audit("auth.admin-setup", "success")
 
     def authenticate(self, password: str, now: datetime | None = None) -> tuple[str, str]:
         if self._password_hash is None:
@@ -44,6 +46,7 @@ class AuthService:
         try:
             self._hasher.verify(self._password_hash, password)
         except VerifyMismatchError as exc:
+            self._audit("auth.login", "failure")
             raise ValueError("invalid credentials") from exc
         token = secrets.token_urlsafe(32)
         csrf = secrets.token_urlsafe(32)
@@ -51,6 +54,7 @@ class AuthService:
         self._sessions[self._digest(token)] = SessionRecord(
             token_hash=self._digest(token), csrf_token=csrf, expires_at=instant + self._ttl
         )
+        self._audit("auth.login", "success")
         return token, csrf
 
     def require_session(self, token: str | None, now: datetime | None = None) -> SessionRecord:
@@ -67,6 +71,11 @@ class AuthService:
     def logout(self, token: str | None) -> None:
         if token:
             self._sessions.pop(self._digest(token), None)
+
+    def _audit(self, action: str, result: str) -> None:
+        callback = self._audit_callback
+        if callable(callback):
+            callback(action=action, actor="admin", target="auth", result=result)
 
     @staticmethod
     def _digest(token: str) -> str:
