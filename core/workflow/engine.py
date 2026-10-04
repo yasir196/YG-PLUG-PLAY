@@ -84,7 +84,7 @@ class DurableWorkflowEngine:
         existing=self.session.scalar(select(ApprovalQueue).where(ApprovalQueue.run_id==run.id,ApprovalQueue.node_id==node["id"],ApprovalQueue.status=="waiting"))
         if existing is None:
             target=self._select(run.id,node["approval"]["artifact"]) if node["approval"].get("artifact") else None
-            gen_id=target["_generation_id"] if isinstance(target,dict) and "_generation_id" in target else None
+            gen_id=self._selected_generation_id(run.id,node["approval"]["artifact"]) if node["approval"].get("artifact") else None
             self.session.add(ApprovalQueue(run_id=run.id,node_id=node["id"],artifact_generation_id=gen_id,status="waiting"))
         run.status="waiting-approval"
 
@@ -103,7 +103,7 @@ class DurableWorkflowEngine:
         if action in {"approve","approved","final-approve"} and target:
             artifact=self.session.get(Artifact,target.artifact_id)
             data=self._read(target)
-            self._publish(run_id,node_id,"approved","script",data,actor_id)
+            self._publish(run_id,node_id,"approved",artifact.contract_id,data,actor_id)
         q.status="decided"; run.status="running"; run.current_node_id=node["approval"]["actions"][action]
         if run.current_node_id=="$self": run.current_node_id=node_id
         self.session.commit(); return self.resume(run_id)
@@ -124,6 +124,19 @@ class DurableWorkflowEngine:
         if not candidates and s.get("optional"): return None
         if not candidates: raise WorkflowRuntimeError("selector unresolved")
         return self._with_meta(max(candidates,key=lambda g:g.id))
+
+    def _selected_generation_id(self,run_id,s):
+        if "from" in s:
+            ref=s["from"]
+            if ref.startswith("$run."): return None
+            node,name=ref.split(".",1); g=self._generation(run_id,node,name,None)
+            return g.id if g else None
+        contract=s.get("latest") or s.get("approved")
+        candidates=[]
+        for ref in s.get("among",[]):
+            node,name=ref.split(".",1); g=self._generation(run_id,node,name,contract)
+            if g:candidates.append(g)
+        return max(candidates,key=lambda g:g.id).id if candidates else None
 
     def _latest(self,run_id,node,name):
         g=self._generation(run_id,node,name,None)
