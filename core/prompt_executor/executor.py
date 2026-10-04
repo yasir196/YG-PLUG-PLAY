@@ -7,7 +7,7 @@ import json
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from jinja2.sandbox import SandboxedEnvironment
 from jsonschema import Draft202012Validator
@@ -138,7 +138,10 @@ class PromptExecutor:
             timeout=10,
             check=True,
         )
-        return json.loads(process.stdout)
+        value = json.loads(process.stdout)
+        if not isinstance(value, dict):
+            raise PromptExecutionError("provider response must be a JSON object")
+        return cast(dict[str, Any], value)
 
     @staticmethod
     def _hash(value: str) -> str:
