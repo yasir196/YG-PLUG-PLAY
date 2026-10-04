@@ -33,6 +33,12 @@ class WorkflowRuntimeError(RuntimeError):
     pass
 
 
+class ApprovalValidationError(WorkflowRuntimeError):
+    """Raised when an approval decision is invalid before mutation."""
+
+    pass
+
+
 class DurableWorkflowEngine:
     def __init__(self, session: Session, artifact_root: Path, runner: CapabilityRunner) -> None:
         self.session, self.artifact_root, self.runner = session, artifact_root, runner
@@ -172,7 +178,9 @@ class DurableWorkflowEngine:
             raise WorkflowRuntimeError("approval not waiting")
         action_spec = node["approval"]["actions"].get(action)
         if action_spec is None:
-            raise WorkflowRuntimeError("approval action not allowed")
+            raise ApprovalValidationError("approval action not allowed")
+        if action_spec.get("requires_comment", False) and not (feedback and feedback.strip()):
+            raise ApprovalValidationError("approval comment required")
         kind = action_spec["kind"]
         target = (
             self.session.get(ArtifactGeneration, q.artifact_generation_id)

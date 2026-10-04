@@ -23,6 +23,10 @@ class ApprovalAccessError(PermissionError):
     pass
 
 
+class ApprovalNotFoundError(WorkflowRuntimeError):
+    pass
+
+
 class ApprovalService:
     def __init__(self, session: Session, engine: DurableWorkflowEngine) -> None:
         self.session = session
@@ -58,11 +62,8 @@ class ApprovalService:
         node = self._node(queue)
         requested = action
         actions = node["approval"]["actions"]
-        if requested not in actions:
-            raise WorkflowRuntimeError("approval action not allowed")
-        kind = actions[requested]["kind"]
-        if kind == "request-revision" and not comment:
-            raise WorkflowRuntimeError("revision comment required")
+        action_spec = actions.get(requested)
+        kind = action_spec.get("kind") if isinstance(action_spec, dict) else None
 
         diff: str | None = None
         if kind == "edit":
@@ -99,7 +100,7 @@ class ApprovalService:
     def _queue(self, queue_id: int) -> ApprovalQueue:
         queue = self.session.get(ApprovalQueue, queue_id)
         if queue is None:
-            raise WorkflowRuntimeError("approval not found")
+            raise ApprovalNotFoundError("approval not found")
         return queue
 
     def _node(self, queue: ApprovalQueue) -> dict[str, Any]:

@@ -86,8 +86,16 @@ def corrected_v5_workflow() -> dict[str, object]:
                     "actions": {
                         "approve": {"kind": "approve", "next": "media-planning"},
                         "edit": {"kind": "edit", "next": "$self"},
-                        "request-revision": {"kind": "request-revision", "next": "revision"},
-                        "reject": {"kind": "reject", "next": "end-rejected"},
+                        "request-revision": {
+                            "kind": "request-revision",
+                            "next": "revision",
+                            "requires_comment": True,
+                        },
+                        "reject": {
+                            "kind": "reject",
+                            "next": "end-rejected",
+                            "requires_comment": True,
+                        },
                     },
                 },
                 "outputs": {"approved-script": {"contract": "script", "version": "^1.0"}},
@@ -104,8 +112,16 @@ def corrected_v5_workflow() -> dict[str, object]:
                     "actions": {
                         "approve": {"kind": "approve", "next": "media-planning"},
                         "edit": {"kind": "edit", "next": "$self"},
-                        "request-revision": {"kind": "request-revision", "next": "revision"},
-                        "reject": {"kind": "reject", "next": "end-rejected"},
+                        "request-revision": {
+                            "kind": "request-revision",
+                            "next": "revision",
+                            "requires_comment": True,
+                        },
+                        "reject": {
+                            "kind": "reject",
+                            "next": "end-rejected",
+                            "requires_comment": True,
+                        },
                     },
                 },
                 "outputs": {"approved-script": {"contract": "script", "version": "^1.0"}},
@@ -165,9 +181,17 @@ def corrected_v5_workflow() -> dict[str, object]:
                 "approval": {
                     "roles": ["producer", "channel-manager"],
                     "actions": {
-                        "retry-failed": {"kind": "request-revision", "next": "generate-images"},
+                        "retry-failed": {
+                            "kind": "request-revision",
+                            "next": "generate-images",
+                            "requires_comment": False,
+                        },
                         "accept-partial": {"kind": "approve", "next": "media-join"},
-                        "reject": {"kind": "reject", "next": "end-rejected"},
+                        "reject": {
+                            "kind": "reject",
+                            "next": "end-rejected",
+                            "requires_comment": True,
+                        },
                     },
                 },
             },
@@ -220,7 +244,11 @@ def corrected_v5_workflow() -> dict[str, object]:
                     "roles": ["producer", "channel-manager"],
                     "actions": {
                         "override": {"kind": "approve", "next": "end-success"},
-                        "reject": {"kind": "reject", "next": "end-rejected"},
+                        "reject": {
+                            "kind": "reject",
+                            "next": "end-rejected",
+                            "requires_comment": True,
+                        },
                     },
                 },
             },
@@ -259,4 +287,19 @@ def test_approval_action_rejects_unknown_kind() -> None:
     workflow = corrected_v5_workflow()
     manual = next(node for node in workflow["nodes"] if node["id"] == "manual-review")  # type: ignore[index]
     manual["approval"]["actions"]["approve"]["kind"] = "ship-it"  # type: ignore[index]
+    assert list(VALIDATOR.iter_errors(workflow))
+
+
+def test_approval_action_requires_comment_must_be_boolean() -> None:
+    workflow = corrected_v5_workflow()
+    manual = next(node for node in workflow["nodes"] if node["id"] == "manual-review")  # type: ignore[index]
+    manual["approval"]["actions"]["request-revision"]["requires_comment"] = "yes"  # type: ignore[index]
+    assert list(VALIDATOR.iter_errors(workflow))
+
+
+def test_approval_action_rejects_misspelled_requires_comment() -> None:
+    workflow = corrected_v5_workflow()
+    manual = next(node for node in workflow["nodes"] if node["id"] == "manual-review")  # type: ignore[index]
+    action = manual["approval"]["actions"]["request-revision"]  # type: ignore[index]
+    action["require_comment"] = action.pop("requires_comment")  # type: ignore[union-attr]
     assert list(VALIDATOR.iter_errors(workflow))

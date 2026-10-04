@@ -127,7 +127,8 @@
       "required": ["kind", "next"],
       "properties": {
         "kind": {"enum": ["approve", "reject", "request-revision", "edit"]},
-        "next": {"$ref": "#/$defs/target"}
+        "next": {"$ref": "#/$defs/target"},
+        "requires_comment": {"type": "boolean"}
       }
     },
     "approval": {

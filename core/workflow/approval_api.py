@@ -6,8 +6,8 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from core.workflow.approvals import ApprovalAccessError, ApprovalService
-from core.workflow.engine import WorkflowRuntimeError
+from core.workflow.approvals import ApprovalAccessError, ApprovalNotFoundError, ApprovalService
+from core.workflow.engine import ApprovalValidationError
 
 
 class ApprovalAction(BaseModel):
@@ -64,7 +64,9 @@ def build_approval_router(
             }
         except ApprovalAccessError as exc:
             raise HTTPException(403, str(exc)) from exc
-        except WorkflowRuntimeError as exc:
+        except ApprovalNotFoundError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        except ApprovalValidationError as exc:
             raise HTTPException(422, str(exc)) from exc
 
     return router

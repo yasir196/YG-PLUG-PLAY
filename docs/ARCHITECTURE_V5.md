@@ -987,8 +987,8 @@ Example:
   "actions": {
     "approve": {"kind": "approve", "next": "media-planning"},
     "edit": {"kind": "edit", "next": "$self"},
-    "request-revision": {"kind": "request-revision", "next": "revision"},
-    "reject": {"kind": "reject", "next": "end-rejected"}
+    "request-revision": {"kind": "request-revision", "next": "revision", "requires_comment": true},
+    "reject": {"kind": "reject", "next": "end-rejected", "requires_comment": true}
   }
 }
 ```
@@ -1083,8 +1083,8 @@ Example manual approval:
     "actions": {
       "approve": {"kind": "approve", "next": "media-planning"},
       "edit": {"kind": "edit", "next": "$self"},
-      "request-revision": {"kind": "request-revision", "next": "revision"},
-      "reject": {"kind": "reject", "next": "end-rejected"}
+      "request-revision": {"kind": "request-revision", "next": "revision", "requires_comment": true},
+      "reject": {"kind": "reject", "next": "end-rejected", "requires_comment": true}
     },
     "timeout_hours": 120,
     "on_timeout": {
@@ -1219,8 +1219,8 @@ Therefore both paths work.
         "actions": {
           "approve": {"kind": "approve", "next": "media-planning"},
           "edit": {"kind": "edit", "next": "$self"},
-          "request-revision": {"kind": "request-revision", "next": "revision"},
-          "reject": {"kind": "reject", "next": "end-rejected"}
+          "request-revision": {"kind": "request-revision", "next": "revision", "requires_comment": true},
+          "reject": {"kind": "reject", "next": "end-rejected", "requires_comment": true}
         }
       },
       "outputs": {
@@ -1245,8 +1245,8 @@ Therefore both paths work.
         "actions": {
           "approve": {"kind": "approve", "next": "media-planning"},
           "edit": {"kind": "edit", "next": "$self"},
-          "request-revision": {"kind": "request-revision", "next": "revision"},
-          "reject": {"kind": "reject", "next": "end-rejected"}
+          "request-revision": {"kind": "request-revision", "next": "revision", "requires_comment": true},
+          "reject": {"kind": "reject", "next": "end-rejected", "requires_comment": true}
         }
       },
       "outputs": {
@@ -1327,7 +1327,7 @@ Therefore both paths work.
         "actions": {
           "retry-failed": {"kind": "request-revision", "next": "generate-images"},
           "accept-partial": {"kind": "approve", "next": "media-join"},
-          "reject": {"kind": "reject", "next": "end-rejected"}
+          "reject": {"kind": "reject", "next": "end-rejected", "requires_comment": true}
         }
       }
     },
