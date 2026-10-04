@@ -45,7 +45,11 @@ WF = {
                 "artifact": {"from": "write.script"},
                 "actions": {
                     "approve": {"kind": "approve", "next": "done"},
-                    "request-revision": {"kind": "request-revision", "next": "write"},
+                    "request-revision": {
+                        "kind": "request-revision",
+                        "next": "write",
+                        "requires_comment": True,
+                    },
                     "edit": {"kind": "edit", "next": "$self"},
                 },
             },
@@ -146,4 +150,8 @@ def test_invalid_action_api_returns_422(tmp_path: Path):
         )
         assert response.status_code == 422
         assert response.json()["detail"] == "approval action not allowed"
+
+        missing = TestClient(app).post("/api/approvals/999999/actions", json={"action": "approve"})
+        assert missing.status_code == 404
+        assert missing.json()["detail"] == "approval not found"
     e.dispose()

@@ -58,7 +58,7 @@
         "actions": {
           "approve": {"kind": "approve", "next": "end-success"},
           "edit": {"kind": "edit", "next": "$self"},
-          "reject": {"kind": "reject", "next": "end-rejected"}
+          "reject": {"kind": "reject", "next": "end-rejected", "requires_comment": true}
         }
       }
     },

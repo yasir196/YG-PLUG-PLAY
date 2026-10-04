@@ -124,6 +124,12 @@ Every human-approval action is an object with an explicit semantic `kind` and tr
 
 Phase 1a requires this format. Legacy string actions such as `"approve": "next-node"` are rejected at workflow validation/install time; there is no implicit action-name migration.
 
+## E13 — Per-action approval comment requirement
+
+Approval comment requirements are declarative per action through optional `requires_comment: boolean`. Missing means `false`; Core must not infer a default from `kind`. When `requires_comment` is true, a missing, empty, or whitespace-only comment is rejected before any decision artifact, queue, Run, edit, approval publication, or transition mutation. Section 35 revision and reject actions set it to true; `retry-failed` explicitly sets it to false.
+
+API mapping distinguishes approval validation from runtime faults: invalid approval decisions use `ApprovalValidationError` and map to HTTP 422; a missing approval queue maps to HTTP 404; unrelated runtime faults are not reclassified as validation errors.
+
 ## Canonical corrections to V5 examples
 
 Apply these substitutions when implementing V5 examples:

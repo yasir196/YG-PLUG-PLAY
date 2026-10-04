@@ -21,7 +21,7 @@ from core.database.models import (
     WorkflowRun,
     WorkflowVersion,
 )
-from core.workflow import DurableWorkflowEngine
+from core.workflow import ApprovalValidationError, DurableWorkflowEngine
 
 WF = {
     "id": "demo",
@@ -147,7 +147,7 @@ def test_invalid_action_has_no_side_effects(tmp_path: Path):
             .filter(Artifact.run_id == "r", Artifact.logical_name == "manual.decision")
             .count()
         )
-        with pytest.raises(Exception, match="approval action not allowed"):
+        with pytest.raises(ApprovalValidationError, match="approval action not allowed"):
             eng.decide("r", "manual", "nonsense", "admin")
         after = (
             s.query(ArtifactGeneration)
@@ -179,4 +179,47 @@ def test_action_name_approve_with_reject_kind_does_not_publish_approved(tmp_path
             s.query(Artifact).filter_by(run_id="r", logical_name="manual.approved").one_or_none()
         )
         assert approved is None
+    e.dispose()
+
+
+def test_requires_comment_rejects_missing_and_whitespace_before_mutation(tmp_path: Path):
+    workflow = deepcopy(WF)
+    workflow["nodes"][1]["approval"]["actions"]["revise"] = {
+        "kind": "request-revision",
+        "next": "write",
+        "requires_comment": True,
+    }
+    e, f = setup(tmp_path / "comment-required.db", workflow)
+    with f() as s:
+        eng = DurableWorkflowEngine(s, tmp_path / "a-comment", runner)
+        assert eng.resume("r") == "waiting-approval"
+        for feedback in (None, "   "):
+            with pytest.raises(ApprovalValidationError, match="approval comment required"):
+                eng.decide("r", "manual", "revise", "admin", feedback=feedback)
+            decisions = (
+                s.query(ArtifactGeneration)
+                .join(Artifact)
+                .filter(Artifact.run_id == "r", Artifact.logical_name == "manual.decision")
+                .count()
+            )
+            queue = s.query(ApprovalQueue).filter_by(run_id="r", node_id="manual").one()
+            run = s.get(WorkflowRun, "r")
+            assert decisions == 0
+            assert queue.status == "waiting"
+            assert run is not None and run.status == "waiting-approval"
+    e.dispose()
+
+
+def test_request_revision_without_required_comment_can_retry(tmp_path: Path):
+    workflow = deepcopy(WF)
+    workflow["nodes"][1]["approval"]["actions"]["retry-failed"] = {
+        "kind": "request-revision",
+        "next": "write",
+        "requires_comment": False,
+    }
+    e, f = setup(tmp_path / "retry-no-comment.db", workflow)
+    with f() as s:
+        eng = DurableWorkflowEngine(s, tmp_path / "a-retry", runner)
+        assert eng.resume("r") == "waiting-approval"
+        assert eng.decide("r", "manual", "retry-failed", "admin") == "waiting-approval"
     e.dispose()
