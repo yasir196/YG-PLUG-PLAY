@@ -6,15 +6,19 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.16,<2",
+    "argon2-cffi>=25.1,<26",
+    "fastapi>=0.118,<1",
     "pydantic>=2.11,<3",
     "sqlalchemy>=2.0,<3",
     "typer>=0.16,<1",
+    "uvicorn>=0.37,<1",
 ]
 
 [dependency-groups]
 dev = [
     "jsonschema>=4.25,<5",
     "mypy>=1.18,<2",
+    "httpx>=0.28,<1",
     "pytest>=8.4,<9",
     "ruff>=0.13,<1",
 ]
