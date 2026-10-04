@@ -39,6 +39,18 @@ class ApprovalValidationError(WorkflowRuntimeError):
     pass
 
 
+class ApprovalNotFoundError(WorkflowRuntimeError):
+    """Raised when the requested approval target does not exist."""
+
+    pass
+
+
+class ApprovalConflictError(WorkflowRuntimeError):
+    """Raised when an approval exists but is no longer actionable."""
+
+    pass
+
+
 class DurableWorkflowEngine:
     def __init__(self, session: Session, artifact_root: Path, runner: CapabilityRunner) -> None:
         self.session, self.artifact_root, self.runner = session, artifact_root, runner
@@ -166,7 +178,12 @@ class DurableWorkflowEngine:
         wf = self.session.get(WorkflowVersion, run.workflow_version_id)
         if wf is None:
             raise WorkflowRuntimeError("workflow version not found")
-        node = next(n for n in json.loads(wf.definition_json)["nodes"] if n["id"] == node_id)
+        node = next(
+            (n for n in json.loads(wf.definition_json)["nodes"] if n["id"] == node_id),
+            None,
+        )
+        if node is None:
+            raise ApprovalNotFoundError("approval node not found")
         q = self.session.scalar(
             select(ApprovalQueue).where(
                 ApprovalQueue.run_id == run_id,
@@ -175,7 +192,7 @@ class DurableWorkflowEngine:
             )
         )
         if q is None:
-            raise WorkflowRuntimeError("approval not waiting")
+            raise ApprovalConflictError("approval not waiting")
         action_spec = node["approval"]["actions"].get(action)
         if action_spec is None:
             raise ApprovalValidationError("approval action not allowed")
@@ -189,7 +206,7 @@ class DurableWorkflowEngine:
         )
         if kind == "edit":
             if target is None or edited_data is None:
-                raise WorkflowRuntimeError("edit requires target and data")
+                raise ApprovalValidationError("edit requires target and data")
             target = self._edit_generation(target, edited_data, actor_id)
             q.artifact_generation_id = target.id
         decision = {
