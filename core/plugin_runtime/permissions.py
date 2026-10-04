@@ -30,6 +30,7 @@ RPC_GRANTS: Mapping[str, str] = MappingProxyType(
         "events.emit": "events.emit",
         "events.listen": "events.listen",
         "provider.jobs": "provider.jobs",
+        "job.progress": "rpc.invoke",
         "credential.raw": "credential.raw",
     }
 )
