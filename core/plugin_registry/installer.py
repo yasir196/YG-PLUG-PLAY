@@ -53,8 +53,8 @@ class ZipInstaller:
                         continue
                     target = stage / PurePosixPath(info.filename)
                     target.parent.mkdir(parents=True, exist_ok=True)
-                    with archive.open(info) as source, target.open("wb") as destination:
-                        shutil.copyfileobj(source, destination)
+                    with archive.open(info) as source, target.open("wb") as sink:
+                        shutil.copyfileobj(source, sink)
             manifest = self._validate_manifest(stage)
             kind = "niches" if manifest.type == "niche" else "plugins"
             destination = self.packages_root / kind / manifest.id / manifest.version / digest
