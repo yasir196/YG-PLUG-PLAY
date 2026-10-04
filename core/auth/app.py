@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import secrets
+from typing import Annotated
+
 from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -33,7 +35,7 @@ def create_app(auth: AuthService | None = None) -> FastAPI:
     )
 
     def current_session(
-        session_token: str | None = Cookie(default=None, alias=SESSION_COOKIE),
+        session_token: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
     ) -> SessionRecord:
         try:
             return auth_service.require_session(session_token)
@@ -41,8 +43,8 @@ def create_app(auth: AuthService | None = None) -> FastAPI:
             raise HTTPException(status_code=401, detail=str(exc)) from exc
 
     def csrf_guard(
-        session: SessionRecord = Depends(current_session),
-        csrf: str | None = Header(default=None, alias="X-CSRF-Token"),
+        session: Annotated[SessionRecord, Depends(current_session)],
+        csrf: Annotated[str | None, Header(alias="X-CSRF-Token")] = None,
     ) -> SessionRecord:
         if csrf is None or not secrets.compare_digest(csrf, session.csrf_token):
             raise HTTPException(status_code=403, detail="invalid CSRF token")
@@ -77,11 +79,11 @@ def create_app(auth: AuthService | None = None) -> FastAPI:
         return {"csrf_token": csrf}
 
     @app.get("/api/me")
-    def me(_: SessionRecord = Depends(current_session)) -> dict[str, str]:
+    def me(_: Annotated[SessionRecord, Depends(current_session)]) -> dict[str, str]:
         return {"role": "admin"}
 
     @app.post("/api/change")
-    def change(_: SessionRecord = Depends(csrf_guard)) -> dict[str, bool]:
+    def change(_: Annotated[SessionRecord, Depends(csrf_guard)]) -> dict[str, bool]:
         return {"ok": True}
 
     return app
