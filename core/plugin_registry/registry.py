@@ -11,7 +11,6 @@ from sqlalchemy.orm import Session
 from core.database.models import (
     Channel,
     ChannelPluginAssignment,
-    Plugin,
     PluginTrustGrant,
     PluginVersion,
     User,
