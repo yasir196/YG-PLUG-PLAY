@@ -1,6 +1,13 @@
 """Plugin worker runtime."""
 
-from .manager import WorkerCrashed, WorkerError, WorkerIdentity, WorkerProcess, WorkerTimeout, worker_environment
+from .manager import (
+    WorkerCrashed,
+    WorkerError,
+    WorkerIdentity,
+    WorkerProcess,
+    WorkerTimeout,
+    worker_environment,
+)
 from .permissions import BASELINE_GRANTS, ExecutionContext, RPCPermissionError, RPCPermissionLayer
 from .sdk import PluginSDK
 
