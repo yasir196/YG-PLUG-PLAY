@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Any, Callable, Mapping
+from typing import Any
 
 
 class RPCPermissionError(PermissionError):
@@ -53,7 +54,7 @@ class ExecutionContext:
         channel_id: str,
         package_sha256: str,
         grants: set[str] | frozenset[str] = frozenset(),
-    ) -> "ExecutionContext":
+    ) -> ExecutionContext:
         return cls(
             plugin_id=plugin_id,
             plugin_version=plugin_version,
