@@ -8,9 +8,9 @@ from pathlib import Path
 import pytest
 
 CRITERIA={
-1:"tests/test_workspace_service.py",
+1:"tests/integration/test_workspace.py",
 2:"tests/security/test_zip_installer.py",
-3:"tests/test_plugin_registry.py",
+3:"tests/security/test_plugin_registry.py",
 4:"tests/test_plugin_registry.py",
 5:"tests/test_purpose_router.py",
 6:"tests/test_prompt_executor.py",
@@ -26,7 +26,7 @@ CRITERIA={
 16:"tests/test_workflow_engine.py",
 17:"tests/test_run_snapshots.py",
 18:"tests/test_progress.py",
-19:"tests/test_data_root.py",
+19:"tests/test_config_data_root.py",
 20:"tests/test_data_root.py",
 }
 @pytest.mark.parametrize("criterion",range(1,21))
