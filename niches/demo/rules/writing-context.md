@@ -1,0 +1,1 @@
+Return plain text only. Keep the response concise and deterministic for the demo.\n
