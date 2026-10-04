@@ -133,7 +133,7 @@ class ScratchJob:
         if sha256_file(target) != digest:
             raise ArtifactError("input hash mismatch during materialization")
         self._input_hashes[target] = digest
-        return InputHandle(str(target.relative_to(self.root)), digest, target.stat().st_size)
+        return InputHandle(target.relative_to(self.root).as_posix(), digest, target.stat().st_size)
 
     def verify_inputs(self) -> None:
         for path, expected in self._input_hashes.items():
@@ -160,7 +160,7 @@ class ScratchJob:
             raise ArtifactError("output hash mismatch")
         if contract_schema is not None:
             Draft202012Validator(contract_schema).validate(metadata or {})
-        return OutputHandle(str(path.relative_to(self.root)), digest, size)
+        return OutputHandle(path.relative_to(self.root).as_posix(), digest, size)
 
     @staticmethod
     def _contained(base: Path, relative: str) -> Path:
