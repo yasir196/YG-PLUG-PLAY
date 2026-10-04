@@ -84,7 +84,7 @@
         {
           "type": "object", "minProperties": 1, "maxProperties": 1,
           "additionalProperties": {
-            "oneOf": [
+            "anyOf": [
               {"$ref": "#/$defs/jsonLogic"},
               {"type": "array", "items": {"$ref": "#/$defs/jsonLogic"}}
             ]
