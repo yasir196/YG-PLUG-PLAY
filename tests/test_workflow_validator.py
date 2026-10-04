@@ -51,9 +51,9 @@ def incompatible_latest_contract(w: dict[str, Any]) -> None:
 
 
 def required_input_missing_on_branch(w: dict[str, Any]) -> None:
-    # Both branches can reach media-join, but only generate-images produces images.
-    join = node(w, "media-join")
-    join["next"] = "branch-consumer"
+    # Create a real bypass path to the consumer that does not execute the
+    # generate-images producer or its parallel join first.
+    node(w, "final-approval")["approval"]["actions"]["approve"] = "branch-consumer"
     w["nodes"].append(
         {
             "id": "branch-consumer",
@@ -61,7 +61,7 @@ def required_input_missing_on_branch(w: dict[str, Any]) -> None:
             "capability": "timeline-build",
             "inputs": {"images": {"from": "generate-images.images"}},
             "outputs": {"timeline": {"contract": "timeline", "version": "^1.0"}},
-            "next": "timeline",
+            "next": "media-planning",
         }
     )
 
@@ -77,7 +77,11 @@ def old_v4_manual_review_bug(w: dict[str, Any]) -> None:
 
 
 def producer_after_consumer(w: dict[str, Any]) -> None:
-    node(w, "timeline")["inputs"]["audio"] = {"from": "late-audio.audio"}
+    # Keep the producer reachable, but deliberately place it after the
+    # consumer so this tests dataflow ordering rather than orphan detection.
+    timeline = node(w, "timeline")
+    timeline["inputs"]["audio"] = {"from": "late-audio.audio"}
+    timeline["next"] = "late-audio"
     w["nodes"].append(
         {
             "id": "late-audio",
@@ -85,7 +89,7 @@ def producer_after_consumer(w: dict[str, Any]) -> None:
             "capability": "voice-generation",
             "inputs": {"request": {"from": "media-planning.voice-request"}},
             "outputs": {"audio": {"contract": "audio.asset", "version": "^1.0"}},
-            "next": "end-success",
+            "next": "pre-publish-check",
         }
     )
 
