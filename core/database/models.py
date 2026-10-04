@@ -248,6 +248,7 @@ class Job(TimestampMixin, Base):
     kind: Mapped[str] = mapped_column(String(80))
     status: Mapped[str] = mapped_column(String(40), default="pending")
     payload_json: Mapped[str] = mapped_column(Text, default="{}")
+    progress_json: Mapped[str] = mapped_column(Text, default="{}")
 
 
 class AuditLog(TimestampMixin, Base):
