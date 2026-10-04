@@ -93,7 +93,6 @@ class DurableWorkflowEngine:
     def _approval_wait(self, run: WorkflowRun, node: dict[str, Any]) -> None:
         existing=self.session.scalar(select(ApprovalQueue).where(ApprovalQueue.run_id==run.id,ApprovalQueue.node_id==node["id"],ApprovalQueue.status=="waiting"))
         if existing is None:
-            target=self._select(run.id,node["approval"]["artifact"]) if node["approval"].get("artifact") else None
             gen_id=self._selected_generation_id(run.id,node["approval"]["artifact"]) if node["approval"].get("artifact") else None
             self.session.add(ApprovalQueue(run_id=run.id,node_id=node["id"],artifact_generation_id=gen_id,status="waiting"))
         run.status="waiting-approval"
