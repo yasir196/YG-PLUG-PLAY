@@ -7,7 +7,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from sqlalchemy import select
 
 from core.database import create_sqlite_engine, session_factory
-from core.database.models import Base, Channel, EncryptedSecret, PluginSetting
+from core.database.models import Base, Channel, EncryptedSecret, Plugin, PluginSetting
 from core.secrets import SecretCipher, SecretService
 
 
@@ -20,7 +20,7 @@ def test_channel_secret_overrides_platform_and_plaintext_never_persists_or_logs(
     plaintext = "SUPER-SECRET-grep-marker-928374"
     cipher = SecretCipher(AESGCM.generate_key(bit_length=256))
     with Session.begin() as session:
-        session.add(Channel(id="channel-1", name="Channel"))
+        session.add_all([Channel(id="channel-1", name="Channel"), Plugin(id="dummy", kind="general")])
         service = SecretService(session, cipher)
         service.set("provider-key", "platform-value")
         service.set("provider-key", plaintext, channel_id="channel-1")
