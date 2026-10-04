@@ -40,12 +40,12 @@ def validate_workflow(workflow: Mapping[str, Any]) -> None:
     _check_loop_targets(nodes)
     _check_approval_targets(nodes)
     _check_cycles_bounded(nodes, edges)
-    _check_reachability(start, nodes, edges)
 
     producers = _producers(nodes)
     _check_selectors(nodes, producers)
     _check_contract_compatibility(nodes, producers)
     _check_required_inputs_reachable_on_every_path(start, nodes, edges, producers)
+    _check_reachability(start, nodes, edges)
 
 
 def _fail(message: str) -> None:
@@ -303,8 +303,20 @@ def _dataflow_edges(
     for node_id, node in nodes.items():
         if node.get("type") == "parallel":
             join = str(node["join"])
-            for branch in node.get("branches", []):
-                result[str(branch)].add(join)
+            branch_starts = {str(x) for x in node.get("branches", [])}
+            for branch in branch_starts:
+                result[branch].add(join)
+            # For dataflow dominance, a join is reached only after every declared
+            # parallel branch completes. Remove direct branch-to-join alternatives
+            # that would make one sibling's output appear optional.
+            for source in branch_starts:
+                if join in result[source]:
+                    result[source].discard(join)
+            if branch_starts:
+                synthetic = "__parallel_all__" + node_id
+                result[synthetic] = {join}
+                for branch in branch_starts:
+                    result[branch].add(synthetic)
         if node.get("type") == "human-approval":
             actions = node.get("approval", {}).get("actions", {})
             for target in actions.values():
