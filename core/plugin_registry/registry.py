@@ -111,8 +111,10 @@ class PluginRegistry:
         if channel.niche_id is None:
             return "*" in manifest.compatible_niches
         for compatibility in manifest.compatible_niches:
-            if compatibility == "*":
-                return True
+            if isinstance(compatibility, str):
+                if compatibility == "*":
+                    return True
+                continue
             if compatibility.id == channel.niche_id and self._version_matches(
                 channel.niche_version or "", compatibility.version
             ):
