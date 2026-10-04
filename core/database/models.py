@@ -194,6 +194,9 @@ class WorkflowNodeRun(TimestampMixin, Base):
     provider_plugin_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     model: Mapped[str | None] = mapped_column(String(200), nullable=True)
     options_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    input_hashes_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    output_hashes_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    usage_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     __table_args__ = (UniqueConstraint("run_id", "node_id", "attempt"),)
 
 
