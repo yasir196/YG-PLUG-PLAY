@@ -90,7 +90,9 @@ def setup_run(tmp_path: Path) -> tuple[Any, Session, DurableWorkflowEngine, int]
         )
     )
     session.commit()
-    workflow = DurableWorkflowEngine(session, tmp_path / "artifacts", lambda c, i: {"script": "draft"})
+    workflow = DurableWorkflowEngine(
+        session, tmp_path / "artifacts", lambda c, i: {"script": "draft"}
+    )
     assert workflow.resume("r") == "waiting-approval"
     queue = session.scalar(
         select(ApprovalQueue).where(ApprovalQueue.run_id == "r", ApprovalQueue.node_id == "review")
