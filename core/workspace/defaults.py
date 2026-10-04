@@ -7,7 +7,7 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from core.database.models import ChannelRoute, Workflow, WorkflowVersion
+from core.database.models import ChannelRoute, Plugin, Workflow, WorkflowVersion
 
 
 def materialize_demo_defaults(session: Session, channel_id: str, root: Path) -> None:
@@ -18,6 +18,13 @@ def materialize_demo_defaults(session: Session, channel_id: str, root: Path) -> 
         (root / "niches/demo/routing/default.routes.json").read_text(encoding="utf-8")
     )
     workflow_id = f"{channel_id}:demo-production"
+    # Routes may reference the bundled demo provider before its executable
+    # version is installed/trusted. Keep the registry identity present so
+    # SQLite foreign keys remain valid; availability still requires version,
+    # trust and an enabled Channel assignment.
+    if session.get(Plugin, "demo-text-provider") is None:
+        session.add(Plugin(id="demo-text-provider", kind="general"))
+        session.flush()
     session.add(Workflow(id=workflow_id, name="Demo Production"))
     session.flush()
     session.add(
