@@ -22,19 +22,21 @@
       "properties": {"contract": {"$ref": "#/$defs/contract"}, "version": {"type": "string", "minLength": 1}}
     },
     "collectionOutput": {
-      "allOf": [
-        {"$ref": "#/$defs/contractRef"},
-        {"type": "object", "additionalProperties": true, "properties": {
-          "collection": {
-            "type": "object", "additionalProperties": false,
-            "properties": {
-              "allow_partial": {"type": "boolean"},
-              "min_items": {"type": "integer", "minimum": 0},
-              "min_success_ratio": {"type": "number", "minimum": 0, "maximum": 1}
-            }
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract", "version"],
+      "properties": {
+        "contract": {"$ref": "#/$defs/contract"},
+        "version": {"type": "string", "minLength": 1},
+        "collection": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "allow_partial": {"type": "boolean"},
+            "min_items": {"type": "integer", "minimum": 0},
+            "min_success_ratio": {"type": "number", "minimum": 0, "maximum": 1}
           }
-        }}
-      ]
+        }
+      }
     },
     "selector": {
       "oneOf": [
