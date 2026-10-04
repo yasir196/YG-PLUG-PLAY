@@ -37,10 +37,10 @@ def validate_workflow(workflow: Mapping[str, Any]) -> None:
 
     edges = _edges(nodes)
     _check_targets_exist(nodes, edges)
-    _check_reachability(start, nodes, edges)
     _check_loop_targets(nodes)
     _check_approval_targets(nodes)
     _check_cycles_bounded(nodes, edges)
+    _check_reachability(start, nodes, edges)
 
     producers = _producers(nodes)
     _check_selectors(nodes, producers)
@@ -276,8 +276,9 @@ def _check_required_inputs_reachable_on_every_path(
             if not refs:
                 continue
             candidate_producers = {producers[ref].node for ref in refs}
+            path_edges = _dataflow_edges(nodes, edges)
             if not _all_paths_have_candidate(
-                start, node_id, candidate_producers, edges, blocked=frozenset({node_id})
+                start, node_id, candidate_producers, path_edges, blocked=frozenset({node_id})
             ):
                 _fail(
                     f"node {node_id!r} required input {input_name!r} is unreachable "
@@ -293,6 +294,23 @@ def _check_required_inputs_reachable_on_every_path(
                         f"node {node_id!r} required input {input_name!r} "
                         f"cannot be produced before use"
                     )
+
+
+def _dataflow_edges(
+    nodes: Mapping[str, Mapping[str, Any]], edges: Mapping[str, set[str]]
+) -> dict[str, set[str]]:
+    result = {node_id: set(targets) for node_id, targets in edges.items()}
+    for node_id, node in nodes.items():
+        if node.get("type") == "parallel":
+            join = str(node["join"])
+            for branch in node.get("branches", []):
+                result[str(branch)].add(join)
+        if node.get("type") == "human-approval":
+            actions = node.get("approval", {}).get("actions", {})
+            for target in actions.values():
+                if target == "$self":
+                    result[node_id].add(node_id)
+    return result
 
 
 def _all_paths_have_candidate(
