@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import warnings
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -92,7 +93,7 @@ class DataRootLayout:
         return self.root / "logs"
 
 
-def default_data_root(*, environ: dict[str, str] | None = None) -> Path:
+def default_data_root(*, environ: Mapping[str, str] | None = None) -> Path:
     """Return the canonical Windows local-app-data root.
 
     LOCALAPPDATA is required rather than silently falling back into the repository.
@@ -109,7 +110,7 @@ def default_data_root(*, environ: dict[str, str] | None = None) -> Path:
 def resolve_data_root(
     override: str | os.PathLike[str] | None = None,
     *,
-    environ: dict[str, str] | None = None,
+    environ: Mapping[str, str] | None = None,
 ) -> Path:
     """Resolve explicit override, environment override, or Windows default."""
 
@@ -152,7 +153,7 @@ def initialize_data_root(
     *,
     install_root: Path,
     override: str | os.PathLike[str] | None = None,
-    environ: dict[str, str] | None = None,
+    environ: Mapping[str, str] | None = None,
 ) -> DataRootLayout:
     """Resolve, validate, warn, and create the mutable directory layout."""
 
