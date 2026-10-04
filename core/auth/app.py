@@ -1,7 +1,5 @@
 """Loopback-only FastAPI shell with strict browser security."""
 
-from __future__ import annotations
-
 import secrets
 from typing import Annotated
 
