@@ -37,7 +37,7 @@ class Niche(TimestampMixin, Base):
     __tablename__ = "niches"
     id: Mapped[str] = mapped_column(String(128), primary_key=True)
     version: Mapped[str] = mapped_column(String(64))
-    channels: Mapped[list["Channel"]] = relationship(back_populates="niche")
+    channels: Mapped[list[Channel]] = relationship(back_populates="niche")
 
 
 class Channel(TimestampMixin, Base):
