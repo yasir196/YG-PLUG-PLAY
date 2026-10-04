@@ -125,9 +125,7 @@ def test_valid_documents(schema_name: str, document: dict[str, Any]) -> None:
             "brief-form",
             {
                 "version": 1,
-                "fields": [
-                    {"key": "audience", "type": "select", "label": "Audience"}
-                ],
+                "fields": [{"key": "audience", "type": "select", "label": "Audience"}],
             },
         ),
         (

@@ -17,9 +17,7 @@ def build_progress_router(
 ) -> APIRouter:
     router = APIRouter(prefix="/api")
 
-    @router.get(
-        "/jobs/{job_id}/progress", dependencies=[Depends(auth_dependency)]
-    )
+    @router.get("/jobs/{job_id}/progress", dependencies=[Depends(auth_dependency)])
     def stream(job_id: str) -> StreamingResponse:
         subscriber = progress.subscribe(job_id)
 
@@ -29,9 +27,7 @@ def build_progress_router(
                 while True:
                     item = subscriber.get(timeout=30)
                     yield (
-                        "event: progress\ndata: "
-                        + json.dumps(item, separators=(",", ":"))
-                        + "\n\n"
+                        "event: progress\ndata: " + json.dumps(item, separators=(",", ":")) + "\n\n"
                     )
             except Exception:
                 yield ": keepalive\n\n"

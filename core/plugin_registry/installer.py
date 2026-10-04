@@ -35,7 +35,9 @@ class InstalledPackage:
 
 
 class ZipInstaller:
-    def __init__(self, packages_root: Path, schema_path: Path, session: Session | None = None) -> None:
+    def __init__(
+        self, packages_root: Path, schema_path: Path, session: Session | None = None
+    ) -> None:
         self.packages_root = packages_root.resolve()
         self.schema_path = schema_path.resolve()
         self.session = session
@@ -61,7 +63,9 @@ class ZipInstaller:
             if destination.exists():
                 self._persist(manifest, digest)
                 if self.session is not None:
-                    RuntimeRegistries(self.session, self.schema_path.parent).populate(manifest, destination)
+                    RuntimeRegistries(self.session, self.schema_path.parent).populate(
+                        manifest, destination
+                    )
                 return InstalledPackage(manifest, digest, destination)
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copytree(stage, destination)

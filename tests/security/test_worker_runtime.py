@@ -5,7 +5,13 @@ from pathlib import Path
 
 import pytest
 
-from core.plugin_runtime import WorkerCrashed, WorkerIdentity, WorkerProcess, WorkerTimeout, worker_environment
+from core.plugin_runtime import (
+    WorkerCrashed,
+    WorkerIdentity,
+    WorkerProcess,
+    WorkerTimeout,
+    worker_environment,
+)
 
 
 def test_worker_environment_is_allowlisted_and_has_no_core_secrets() -> None:
@@ -32,8 +38,13 @@ def script(tmp_path: Path, body: str) -> Path:
 
 
 def test_json_rpc_identity_worker_survives_normal_call(tmp_path: Path) -> None:
-    path = script(tmp_path, "import json,sys\nfor line in sys.stdin:\n r=json.loads(line); print(json.dumps({'jsonrpc':'2.0','id':r['id'],'result':r['params']}),flush=True)\n")
-    worker = WorkerProcess([sys.executable, str(path)], WorkerIdentity("p", "1.0.0", "c"), cwd=tmp_path)
+    path = script(
+        tmp_path,
+        "import json,sys\nfor line in sys.stdin:\n r=json.loads(line); print(json.dumps({'jsonrpc':'2.0','id':r['id'],'result':r['params']}),flush=True)\n",
+    )
+    worker = WorkerProcess(
+        [sys.executable, str(path)], WorkerIdentity("p", "1.0.0", "c"), cwd=tmp_path
+    )
     try:
         assert worker.call("echo", {"ok": True}) == {"ok": True}
     finally:
@@ -42,7 +53,9 @@ def test_json_rpc_identity_worker_survives_normal_call(tmp_path: Path) -> None:
 
 def test_worker_crash_does_not_crash_core(tmp_path: Path) -> None:
     path = script(tmp_path, "raise SystemExit(7)\n")
-    worker = WorkerProcess([sys.executable, str(path)], WorkerIdentity("p", "1.0.0", "c"), cwd=tmp_path)
+    worker = WorkerProcess(
+        [sys.executable, str(path)], WorkerIdentity("p", "1.0.0", "c"), cwd=tmp_path
+    )
     with pytest.raises(WorkerCrashed):
         worker.call("boom", {})
     assert 2 + 2 == 4
@@ -51,7 +64,9 @@ def test_worker_crash_does_not_crash_core(tmp_path: Path) -> None:
 
 def test_worker_timeout_is_enforced(tmp_path: Path) -> None:
     path = script(tmp_path, "import time\ntime.sleep(5)\n")
-    worker = WorkerProcess([sys.executable, str(path)], WorkerIdentity("p", "1.0.0", "c"), cwd=tmp_path, timeout=0.05)
+    worker = WorkerProcess(
+        [sys.executable, str(path)], WorkerIdentity("p", "1.0.0", "c"), cwd=tmp_path, timeout=0.05
+    )
     with pytest.raises(WorkerTimeout):
         worker.call("slow", {})
     assert worker.process is None
@@ -59,7 +74,12 @@ def test_worker_timeout_is_enforced(tmp_path: Path) -> None:
 
 def test_idle_shutdown(tmp_path: Path) -> None:
     path = script(tmp_path, "import time\ntime.sleep(5)\n")
-    worker = WorkerProcess([sys.executable, str(path)], WorkerIdentity("p", "1.0.0", "c"), cwd=tmp_path, idle_timeout=0.01)
+    worker = WorkerProcess(
+        [sys.executable, str(path)],
+        WorkerIdentity("p", "1.0.0", "c"),
+        cwd=tmp_path,
+        idle_timeout=0.01,
+    )
     worker.start()
     assert worker.shutdown_if_idle(worker._last_used + 1)
     assert worker.process is None

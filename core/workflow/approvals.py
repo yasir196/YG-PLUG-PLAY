@@ -28,13 +28,9 @@ class ApprovalService:
         self.session = session
         self.engine = engine
 
-    def list(
-        self, actor_roles: set[str], is_admin: bool = False
-    ) -> list[dict[str, Any]]:
+    def list(self, actor_roles: set[str], is_admin: bool = False) -> list[dict[str, Any]]:
         rows = list(
-            self.session.scalars(
-                select(ApprovalQueue).where(ApprovalQueue.status == "waiting")
-            )
+            self.session.scalars(select(ApprovalQueue).where(ApprovalQueue.status == "waiting"))
         )
         return [
             self._view(queue, include_artifact=False)
@@ -42,9 +38,7 @@ class ApprovalService:
             if self._allowed(queue, actor_roles, is_admin)
         ]
 
-    def view(
-        self, queue_id: int, actor_roles: set[str], is_admin: bool = False
-    ) -> dict[str, Any]:
+    def view(self, queue_id: int, actor_roles: set[str], is_admin: bool = False) -> dict[str, Any]:
         queue = self._queue(queue_id)
         self._require(queue, actor_roles, is_admin)
         return self._view(queue, include_artifact=True)
@@ -97,9 +91,7 @@ class ApprovalService:
             .order_by(ApprovalDecision.id.desc())
         )
         if decision is not None and diff is not None:
-            decision.diff_json = json.dumps(
-                {"format": "unified", "diff": diff}, ensure_ascii=False
-            )
+            decision.diff_json = json.dumps({"format": "unified", "diff": diff}, ensure_ascii=False)
             self.session.commit()
         return status
 
@@ -127,9 +119,7 @@ class ApprovalService:
                 return cast(dict[str, Any], node)
         raise WorkflowRuntimeError("approval node missing from run snapshot")
 
-    def _allowed(
-        self, queue: ApprovalQueue, roles: set[str], is_admin: bool
-    ) -> bool:
+    def _allowed(self, queue: ApprovalQueue, roles: set[str], is_admin: bool) -> bool:
         if is_admin:
             return True
         node = self._node(queue)
@@ -143,34 +133,26 @@ class ApprovalService:
             raise WorkflowRuntimeError("approval roles are invalid")
         return bool(set(required_roles) & roles)
 
-    def _require(
-        self, queue: ApprovalQueue, roles: set[str], is_admin: bool
-    ) -> None:
+    def _require(self, queue: ApprovalQueue, roles: set[str], is_admin: bool) -> None:
         if not self._allowed(queue, roles, is_admin):
             raise ApprovalAccessError("approval role required")
 
     def _artifact(self, queue: ApprovalQueue) -> Any:
         if queue.artifact_generation_id is None:
             return None
-        generation = self.session.get(
-            ArtifactGeneration, queue.artifact_generation_id
-        )
+        generation = self.session.get(ArtifactGeneration, queue.artifact_generation_id)
         if generation is None:
             raise WorkflowRuntimeError("approval artifact generation not found")
         return json.loads(Path(generation.content_path).read_text(encoding="utf-8"))
 
-    def _view(
-        self, queue: ApprovalQueue, *, include_artifact: bool
-    ) -> dict[str, Any]:
+    def _view(self, queue: ApprovalQueue, *, include_artifact: bool) -> dict[str, Any]:
         node = self._node(queue)
         approval = node.get("approval")
         if not isinstance(approval, dict):
             raise WorkflowRuntimeError("approval node configuration missing")
         roles = approval.get("roles")
         actions = approval.get("actions")
-        if not isinstance(roles, list) or not all(
-            isinstance(role, str) for role in roles
-        ):
+        if not isinstance(roles, list) or not all(isinstance(role, str) for role in roles):
             raise WorkflowRuntimeError("approval roles are invalid")
         if not isinstance(actions, dict):
             raise WorkflowRuntimeError("approval actions are invalid")

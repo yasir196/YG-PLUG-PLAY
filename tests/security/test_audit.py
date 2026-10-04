@@ -39,9 +39,7 @@ def test_audit_log_rejects_update_and_delete(tmp_path) -> None:
     Base.metadata.create_all(engine)
     Session = session_factory(engine)
     with Session.begin() as session:
-        row = AuditService(session).record(
-            AuditEvent("admin", "project.create", "project", "p1")
-        )
+        row = AuditService(session).record(AuditEvent("admin", "project.create", "project", "p1"))
     with Session() as session:
         persisted = session.get(AuditLog, row.id)
         assert persisted is not None

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+import importlib.util
 from copy import deepcopy
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 from core.workflow import WorkflowValidationError, validate_workflow
-import importlib.util
-from pathlib import Path
 
 _fixture_path = Path(__file__).parent / "schemas" / "test_workflow_schema.py"
 _spec = importlib.util.spec_from_file_location("workflow_schema_fixture", _fixture_path)

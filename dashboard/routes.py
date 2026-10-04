@@ -61,7 +61,7 @@ def build_dashboard_router(
     def channel(cid: str, s: Annotated[Session, Depends(session_dependency)]) -> HTMLResponse:
         item = s.get(Channel, cid)
         links = (
-            f'<p>Niche: {html.escape(item.niche_id or "")}</p>'
+            f"<p>Niche: {html.escape(item.niche_id or '')}</p>"
             f'<p><a href="/dashboard/channels/{cid}/plugins">Plugins</a> · '
             f'<a href="/dashboard/channels/{cid}/routing">Routing</a> · '
             f'<a href="/dashboard/channels/{cid}/projects">Projects</a></p>'
@@ -79,7 +79,7 @@ def build_dashboard_router(
         }
         body = "".join(
             f"<section><b>{html.escape(item.plugin_id)} {html.escape(item.version)}</b> — "
-            f'{"enabled" if assignments.get(item.plugin_id) and assignments[item.plugin_id].enabled else "disabled"}'
+            f"{'enabled' if assignments.get(item.plugin_id) and assignments[item.plugin_id].enabled else 'disabled'}"
             f'<p><a href="/dashboard/channels/{cid}/plugins/{item.plugin_id}/settings">'
             "Settings</a></p></section>"
             for item in rows
@@ -118,7 +118,7 @@ def build_dashboard_router(
             "Routing",
             "".join(
                 f"<p>{html.escape(item.capability)} / "
-                f'{html.escape(item.purpose or item.variant or "default")} → '
+                f"{html.escape(item.purpose or item.variant or 'default')} → "
                 f"{html.escape(item.primary_plugin_id)} {html.escape(item.options_json)}</p>"
                 for item in rows
             ),
@@ -146,7 +146,7 @@ def build_dashboard_router(
         runs = s.scalars(select(WorkflowRun).where(WorkflowRun.project_id == pid)).all()
         return page(
             item.title,
-            f'<h2>Brief</h2><pre>{html.escape(brief.data_json if brief else "{}")}</pre>'
+            f"<h2>Brief</h2><pre>{html.escape(brief.data_json if brief else '{}')}</pre>"
             + "".join(
                 f'<p><a href="/dashboard/runs/{run.id}">Run {run.id}</a> — {run.status}</p>'
                 for run in runs

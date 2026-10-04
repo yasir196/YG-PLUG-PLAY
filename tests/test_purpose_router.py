@@ -80,9 +80,7 @@ def test_two_purposes_resolve_different_models_same_channel(tmp_path) -> None:
             input_contract="text-generation.request",
             output_contract="text-generation.result",
         )
-        script = router.resolve(
-            channel_id="c1", capability="text-generation", purpose="script"
-        )
+        script = router.resolve(channel_id="c1", capability="text-generation", purpose="script")
         assert research.model == "research-model"
         assert research.options["temperature"] == 0.2
         assert script.model == "writing-model"

@@ -202,7 +202,9 @@ def _check_selectors(
         for input_name, selector in node.get("inputs", {}).items():
             for ref in _selector_refs(selector):
                 if ref not in producers:
-                    _fail(f"node {node_id!r} input {input_name!r} has dangling from/reference {ref!r}")
+                    _fail(
+                        f"node {node_id!r} input {input_name!r} has dangling from/reference {ref!r}"
+                    )
         approval = node.get("approval", {})
         artifact = approval.get("artifact")
         if artifact:

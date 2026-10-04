@@ -72,7 +72,11 @@ class PromptExecutor:
             channel_id=channel_id,
             capability=capability.uses.capability,
             purpose=capability.uses.purpose,
-            required_features=(capability.requirements.model_dump(exclude_none=True) if capability.requirements else {}),
+            required_features=(
+                capability.requirements.model_dump(exclude_none=True)
+                if capability.requirements
+                else {}
+            ),
             explicit_options=explicit_options,
         )
         request = {"messages": [{"role": "user", "content": rendered}], **route.options}
@@ -83,7 +87,9 @@ class PromptExecutor:
         return PromptResult(data, route.plugin_id, route.model, prompt_hash, tuple(rule_hashes))
 
     @staticmethod
-    def _prompt_path(relative: str, plugin_root: Path, niche_root: Path | None, override: Path | None) -> Path:
+    def _prompt_path(
+        relative: str, plugin_root: Path, niche_root: Path | None, override: Path | None
+    ) -> Path:
         if override is not None and override.is_file():
             return override
         if niche_root is not None:

@@ -71,9 +71,7 @@ class RPCPermissionLayer:
     def __init__(self, handlers: Mapping[str, Handler]) -> None:
         self._handlers = MappingProxyType(dict(handlers))
 
-    def dispatch(
-        self, context: ExecutionContext, method: str, params: dict[str, Any]
-    ) -> Any:
+    def dispatch(self, context: ExecutionContext, method: str, params: dict[str, Any]) -> Any:
         self._assert_identity(context, params)
         handler = self._handlers.get(method)
         if handler is None:

@@ -23,24 +23,16 @@ def build_run_progress_router(
 ) -> APIRouter:
     router = APIRouter(prefix="/api")
 
-    @router.get(
-        "/runs/{run_id}/progress", dependencies=[Depends(auth_dependency)]
-    )
+    @router.get("/runs/{run_id}/progress", dependencies=[Depends(auth_dependency)])
     def stream(
         run_id: str, session: Annotated[Session, Depends(session_dependency)]
     ) -> StreamingResponse:
         jobs = list(session.scalars(select(Job).where(Job.run_id == run_id)))
 
         def events() -> Iterator[str]:
-            subscriptions = [
-                (job.id, progress.subscribe(job.id)) for job in jobs
-            ]
+            subscriptions = [(job.id, progress.subscribe(job.id)) for job in jobs]
             try:
-                yield (
-                    "event: ready\ndata: "
-                    + json.dumps({"run_id": run_id})
-                    + "\n\n"
-                )
+                yield ("event: ready\ndata: " + json.dumps({"run_id": run_id}) + "\n\n")
                 while True:
                     sent = False
                     for job_id, subscriber in subscriptions:

@@ -17,7 +17,9 @@ class Base(DeclarativeBase):
 
 
 class TimestampMixin:
-    created_at: Mapped[str] = mapped_column(String(40), default=lambda: datetime.utcnow().isoformat())
+    created_at: Mapped[str] = mapped_column(
+        String(40), default=lambda: datetime.utcnow().isoformat()
+    )
 
 
 class User(TimestampMixin, Base):

@@ -52,8 +52,6 @@ def test_demo_provider_is_deterministic() -> None:
 
 
 def test_config_only_demo_prompts_has_no_python_entrypoint() -> None:
-    manifest = json.loads(
-        (ROOT / "plugins/demo-prompts/plugin.json").read_text(encoding="utf-8")
-    )
+    manifest = json.loads((ROOT / "plugins/demo-prompts/plugin.json").read_text(encoding="utf-8"))
     assert manifest["runtime"] == {"kind": "config-only"}
     assert not list((ROOT / "plugins/demo-prompts").rglob("*.py"))

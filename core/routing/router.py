@@ -100,9 +100,7 @@ class PurposeRouter:
             if found is not None:
                 return found
         if variant is not None:
-            found = next(
-                (r for r in routes if r.purpose is None and r.variant == variant), None
-            )
+            found = next((r for r in routes if r.purpose is None and r.variant == variant), None)
             if found is not None:
                 return found
         return next((r for r in routes if r.purpose is None and r.variant is None), None)
@@ -146,7 +144,11 @@ class PurposeRouter:
 
     @staticmethod
     def _validate_features(supported: Any, required: dict[str, Any]) -> None:
-        data = supported.model_dump(exclude_none=True) if hasattr(supported, "model_dump") else dict(supported)
+        data = (
+            supported.model_dump(exclude_none=True)
+            if hasattr(supported, "model_dump")
+            else dict(supported)
+        )
         for key, wanted in required.items():
             actual = data.get(key)
             if isinstance(wanted, bool) and wanted and actual is not True:

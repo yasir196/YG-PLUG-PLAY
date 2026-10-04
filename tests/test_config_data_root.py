@@ -17,9 +17,7 @@ from core.config.data_root import DATA_SUBDIRECTORIES
 
 def test_default_path_uses_localappdata() -> None:
     env = {"LOCALAPPDATA": r"C:\Users\Test\AppData\Local"}
-    assert default_data_root(environ=env) == (
-        Path(r"C:\Users\Test\AppData\Local") / "YG-PLUG-PLAY"
-    )
+    assert default_data_root(environ=env) == (Path(r"C:\Users\Test\AppData\Local") / "YG-PLUG-PLAY")
 
 
 def test_override_takes_precedence_and_creates_subfolders(tmp_path: Path) -> None:

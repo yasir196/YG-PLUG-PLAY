@@ -100,7 +100,10 @@ def test_invalid_or_reserved_public_names_fail(validator: Validator, value: str)
 @pytest.mark.parametrize(
     ("validator", "value"),
     [
-        (lambda value: is_valid_capability_id(value, allow_reserved_namespace=True), "yg/text-generation"),
+        (
+            lambda value: is_valid_capability_id(value, allow_reserved_namespace=True),
+            "yg/text-generation",
+        ),
         (
             lambda value: is_valid_contract_id(value, allow_reserved_namespace=True),
             "yg-standard-contracts/project.brief",

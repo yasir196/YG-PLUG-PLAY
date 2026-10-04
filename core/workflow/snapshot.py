@@ -74,8 +74,6 @@ def freeze_run_snapshot(session: Session, run_id: str) -> dict[str, Any]:
             for setting in settings
         ],
     }
-    session.add(
-        RunSnapshot(run_id=run_id, snapshot_json=json.dumps(payload, sort_keys=True))
-    )
+    session.add(RunSnapshot(run_id=run_id, snapshot_json=json.dumps(payload, sort_keys=True)))
     session.flush()
     return payload

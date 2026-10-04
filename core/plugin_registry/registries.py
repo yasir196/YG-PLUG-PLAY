@@ -25,12 +25,20 @@ class RuntimeRegistries:
     def populate(self, manifest: PluginManifest, package_root: Path) -> None:
         self._claim_namespace(manifest)
         delegations = set(manifest.namespace_delegations_requested)
-        for path in sorted((package_root / "contracts").glob("*.json")) if (package_root / "contracts").exists() else []:
+        for path in (
+            sorted((package_root / "contracts").glob("*.json"))
+            if (package_root / "contracts").exists()
+            else []
+        ):
             item = json.loads(path.read_text(encoding="utf-8"))
             self._validate("contract.schema.json", item)
             self._authorize_id(manifest, item["id"], delegations)
             self._register_contract(item)
-        for path in sorted((package_root / "capabilities").glob("*.json")) if (package_root / "capabilities").exists() else []:
+        for path in (
+            sorted((package_root / "capabilities").glob("*.json"))
+            if (package_root / "capabilities").exists()
+            else []
+        ):
             item = json.loads(path.read_text(encoding="utf-8"))
             self._validate("capability.schema.json", item)
             self._authorize_id(manifest, item["id"], delegations)
@@ -48,7 +56,9 @@ class RuntimeRegistries:
 
     def _claim_namespace(self, manifest: PluginManifest) -> None:
         existing = self.session.get(NamespaceRegistry, manifest.id)
-        if existing is not None and (existing.owner_id != manifest.id or existing.owner_type != manifest.type):
+        if existing is not None and (
+            existing.owner_id != manifest.id or existing.owner_type != manifest.type
+        ):
             raise RegistryConflict(f"namespace {manifest.id} already owned")
         if existing is None:
             self.session.add(
@@ -60,9 +70,7 @@ class RuntimeRegistries:
             )
             self.session.flush()
 
-    def _authorize_id(
-        self, manifest: PluginManifest, identity: str, requested: set[str]
-    ) -> None:
+    def _authorize_id(self, manifest: PluginManifest, identity: str, requested: set[str]) -> None:
         namespace = identity.split("/", 1)[0] if "/" in identity else None
         if namespace is None:
             return
@@ -75,7 +83,9 @@ class RuntimeRegistries:
         # namespace; a general plugin needs explicit delegation request and
         # compatibility with the owning niche. Ownership never changes.
         compatible = any(
-            getattr(item, "id", None) == namespace for item in manifest.compatible_niches if item != "*"
+            getattr(item, "id", None) == namespace
+            for item in manifest.compatible_niches
+            if item != "*"
         )
         if manifest.type == "niche" and compatible and owner.owner_type == "niche":
             return

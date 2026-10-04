@@ -6,7 +6,7 @@ import pytest
 from jsonschema.exceptions import ValidationError
 
 from core.database import create_sqlite_engine, session_factory
-from core.database.models import Base, ChannelRoute, ProjectBrief
+from core.database.models import Base, ProjectBrief
 from core.workspace.service import WorkspaceService
 
 

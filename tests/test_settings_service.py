@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+import pytest
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from jsonschema.exceptions import ValidationError
-
-import pytest
 
 from core.database import create_sqlite_engine, session_factory
 from core.database.models import Base, Channel, Plugin, PluginSetting, Project
@@ -44,8 +43,9 @@ def setup(tmp_path):
         )
         session.commit()
         cipher = SecretCipher(AESGCM.generate_key(bit_length=256))
-        yield session, SettingsService(
-            session, SecretService(session, cipher), "demo-provider", DEFINITION
+        yield (
+            session,
+            SettingsService(session, SecretService(session, cipher), "demo-provider", DEFINITION),
         )
     engine.dispose()
 

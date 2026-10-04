@@ -34,7 +34,9 @@ class WorkerIdentity:
     channel_id: str
 
 
-def worker_environment(identity: WorkerIdentity, source: Mapping[str, str] | None = None) -> dict[str, str]:
+def worker_environment(
+    identity: WorkerIdentity, source: Mapping[str, str] | None = None
+) -> dict[str, str]:
     source = os.environ if source is None else source
     env = {key: source[key] for key in _ALLOWED_ENV if key in source}
     env.update(

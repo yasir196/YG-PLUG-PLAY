@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
@@ -62,7 +61,9 @@ def test_conflicting_namespace_registration_is_rejected(db) -> None:
 
 def test_niche_namespace_delegation_keeps_niche_owner(db) -> None:
     session, tmp = db
-    session.add(NamespaceRegistry(namespace="senior-health", owner_type="niche", owner_id="senior-health"))
+    session.add(
+        NamespaceRegistry(namespace="senior-health", owner_type="niche", owner_id="senior-health")
+    )
     session.flush()
     plugin = manifest("reviewer", niche="senior-health", delegation=True)
     RuntimeRegistries(session, Path("schemas")).populate(plugin, tmp)
@@ -72,7 +73,9 @@ def test_niche_namespace_delegation_keeps_niche_owner(db) -> None:
 
 def test_niche_namespace_without_delegation_is_rejected(db) -> None:
     session, tmp = db
-    session.add(NamespaceRegistry(namespace="senior-health", owner_type="niche", owner_id="senior-health"))
+    session.add(
+        NamespaceRegistry(namespace="senior-health", owner_type="niche", owner_id="senior-health")
+    )
     session.flush()
     with pytest.raises(RegistryConflict, match="no authority"):
         RuntimeRegistries(session, Path("schemas")).populate(

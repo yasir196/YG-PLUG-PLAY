@@ -74,10 +74,7 @@ class PluginDataService:
             if not _SAFE.fullmatch(value):
                 raise PluginDataError("unsafe plugin-data identity")
         path = (
-            self.root
-            / context.plugin_id
-            / context.plugin_version
-            / context.channel_id
+            self.root / context.plugin_id / context.plugin_version / context.channel_id
         ).resolve()
         if not path.is_relative_to(self.root):
             raise PluginDataError("plugin-data scope escapes root")

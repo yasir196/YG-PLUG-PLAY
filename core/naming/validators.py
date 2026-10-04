@@ -18,9 +18,7 @@ CONTRACT_PATTERN = re.compile(
     r"^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*/)?"
     r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)*$"
 )
-EVENT_PATTERN = re.compile(
-    r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)+$"
-)
+EVENT_PATTERN = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)+$")
 
 RESERVED_IDS = frozenset({"core", "system", "project", "channel", "yg"})
 RESERVED_EVENT_NAMESPACES = frozenset({"core", "system", "project", "channel"})
@@ -112,9 +110,7 @@ def is_valid_capability_id(value: str, *, allow_reserved_namespace: bool = False
 
 
 def is_valid_contract_id(value: str, *, allow_reserved_namespace: bool = False) -> bool:
-    return _is_valid(
-        validate_contract_id, value, allow_reserved_namespace=allow_reserved_namespace
-    )
+    return _is_valid(validate_contract_id, value, allow_reserved_namespace=allow_reserved_namespace)
 
 
 def is_valid_event_id(value: str, *, core_emitter: bool = False) -> bool:

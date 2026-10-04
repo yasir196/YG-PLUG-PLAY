@@ -44,9 +44,7 @@ def build_approval_router(
         except ApprovalAccessError as exc:
             raise HTTPException(403, str(exc)) from exc
 
-    @router.post(
-        "/{queue_id}/actions", dependencies=[Depends(csrf_dependency)]
-    )
+    @router.post("/{queue_id}/actions", dependencies=[Depends(csrf_dependency)])
     def act(
         queue_id: int,
         body: ApprovalAction,

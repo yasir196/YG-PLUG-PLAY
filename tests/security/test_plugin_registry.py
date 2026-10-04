@@ -101,15 +101,9 @@ def test_different_hash_loses_trust(db) -> None:
     add_version(db, old_hash)
     add_version(db, new_hash)
     registry = PluginRegistry(db)
-    registry.grant_trust(
-        "demo-provider", "1.0.0", old_hash, actor_id="admin", actor_is_admin=True
-    )
-    assert registry.has_executable_trust(
-        registry._version("demo-provider", "1.0.0", old_hash)
-    )
-    assert not registry.has_executable_trust(
-        registry._version("demo-provider", "1.0.0", new_hash)
-    )
+    registry.grant_trust("demo-provider", "1.0.0", old_hash, actor_id="admin", actor_is_admin=True)
+    assert registry.has_executable_trust(registry._version("demo-provider", "1.0.0", old_hash))
+    assert not registry.has_executable_trust(registry._version("demo-provider", "1.0.0", new_hash))
 
 
 def test_effective_availability_requires_assignment_enabled(db) -> None:

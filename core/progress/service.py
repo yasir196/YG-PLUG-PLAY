@@ -23,9 +23,7 @@ class ProgressService:
         self._pending: dict[str, dict[str, Any]] = {}
         self._subs: dict[str, list[Queue[dict[str, Any]]]] = defaultdict(list)
 
-    def report(
-        self, context: ExecutionContext, params: dict[str, Any]
-    ) -> dict[str, bool]:
+    def report(self, context: ExecutionContext, params: dict[str, Any]) -> dict[str, bool]:
         job_id = str(params["job_id"])
         job = self.session.get(Job, job_id)
         if job is None:
