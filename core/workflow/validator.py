@@ -276,6 +276,17 @@ def _check_required_inputs_reachable_on_every_path(
             if not refs:
                 continue
             candidate_producers = {producers[ref].node for ref in refs}
+
+            # A join with an all-branches completion policy is a synchronization
+            # barrier: after that join, outputs from each declared branch are
+            # available even though an ordinary path walk sees sibling branches
+            # as alternatives. This is not a bypass; the consumer must be
+            # downstream of the declared join.
+            if "from" in selector:
+                producer = next(iter(candidate_producers))
+                if _parallel_sibling_producer_is_available(producer, node_id, nodes, edges):
+                    continue
+
             if not _all_paths_have_candidate(
                 start, node_id, candidate_producers, edges, blocked=frozenset({node_id})
             ):
@@ -284,12 +295,11 @@ def _check_required_inputs_reachable_on_every_path(
                     "on at least one path"
                 )
 
-            # A direct 'from' must specifically dominate the consumer. For latest/approved,
-            # any candidate in the declared lineage is sufficient on each path.
+            # Outside a synchronized parallel join, a direct 'from' must
+            # specifically dominate the consumer. For latest/approved, any
+            # candidate in the declared lineage is sufficient on each path.
             if "from" in selector:
                 producer = next(iter(candidate_producers))
-                if _parallel_sibling_producer_is_available(producer, node_id, nodes, edges):
-                    continue
                 if producer not in _ancestors(node_id, predecessors):
                     _fail(
                         f"node {node_id!r} required input {input_name!r} "
