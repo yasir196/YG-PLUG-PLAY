@@ -218,7 +218,10 @@ def corrected_v5_workflow() -> dict[str, object]:
                 "inputs": {"checklist": {"from": "pre-publish-check.checklist"}},
                 "approval": {
                     "roles": ["producer", "channel-manager"],
-                    "actions": {"override": {"kind": "approve", "next": "end-success"}, "reject": {"kind": "reject", "next": "end-rejected"}},
+                    "actions": {
+                        "override": {"kind": "approve", "next": "end-success"},
+                        "reject": {"kind": "reject", "next": "end-rejected"},
+                    },
                 },
             },
             {"id": "end-success", "type": "end", "status": "success"},

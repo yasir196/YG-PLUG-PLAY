@@ -109,7 +109,13 @@ def test_invalid_action_api_returns_422(tmp_path: Path):
     Base.metadata.create_all(e)
     f = session_factory(e)
     with f() as s:
-        s.add_all([Niche(id="n", version="1"), User(id="admin", username="admin"), Workflow(id="w", name="W")])
+        s.add_all(
+            [
+                Niche(id="n", version="1"),
+                User(id="admin", username="admin"),
+                Workflow(id="w", name="W"),
+            ]
+        )
         s.flush()
         s.add(Channel(id="c", name="C", niche_id="n", niche_version="1"))
         s.flush()
@@ -119,7 +125,15 @@ def test_invalid_action_api_returns_422(tmp_path: Path):
         wv = WorkflowVersion(workflow_id="w", version=1, definition_json=json.dumps(WF))
         s.add(wv)
         s.flush()
-        s.add(WorkflowRun(id="r", project_id="p", workflow_version_id=wv.id, status="running", current_node_id="write"))
+        s.add(
+            WorkflowRun(
+                id="r",
+                project_id="p",
+                workflow_version_id=wv.id,
+                status="running",
+                current_node_id="write",
+            )
+        )
         s.commit()
         eng = DurableWorkflowEngine(s, tmp_path / "api-art", lambda c, i: {"script": "draft"})
         eng.resume("r")
@@ -127,7 +141,9 @@ def test_invalid_action_api_returns_422(tmp_path: Path):
         qid = svc.list({"editor"})[0]["id"]
         app = FastAPI()
         app.include_router(build_approval_router(lambda: svc, lambda: True, lambda: True))
-        response = TestClient(app).post(f"/api/approvals/{qid}/actions", json={"action": "nonsense"})
+        response = TestClient(app).post(
+            f"/api/approvals/{qid}/actions", json={"action": "nonsense"}
+        )
         assert response.status_code == 422
         assert response.json()["detail"] == "approval action not allowed"
     e.dispose()

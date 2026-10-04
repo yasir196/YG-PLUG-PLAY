@@ -125,8 +125,7 @@ def _check_approval_targets(nodes: Mapping[str, Mapping[str, Any]]) -> None:
             target = action["next"]
             if target != "$self" and target not in nodes:
                 _fail(
-                    f"approval {node_id!r} action {action_name!r} "
-                    f"targets missing node {target!r}"
+                    f"approval {node_id!r} action {action_name!r} targets missing node {target!r}"
                 )
 
 

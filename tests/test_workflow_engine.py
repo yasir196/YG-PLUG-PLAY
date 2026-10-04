@@ -80,7 +80,9 @@ def setup(db, workflow=None):
         s.flush()
         s.add(Project(id="p", channel_id="c", title="P"))
         s.flush()
-        w = WorkflowVersion(workflow_id="demo", version=1, definition_json=json.dumps(workflow or WF))
+        w = WorkflowVersion(
+            workflow_id="demo", version=1, definition_json=json.dumps(workflow or WF)
+        )
         s.add(w)
         s.flush()
         s.add_all(
@@ -139,10 +141,20 @@ def test_invalid_action_has_no_side_effects(tmp_path: Path):
     with f() as s:
         eng = DurableWorkflowEngine(s, tmp_path / "a-invalid", runner)
         assert eng.resume("r") == "waiting-approval"
-        before = s.query(ArtifactGeneration).join(Artifact).filter(Artifact.run_id == "r", Artifact.logical_name == "manual.decision").count()
+        before = (
+            s.query(ArtifactGeneration)
+            .join(Artifact)
+            .filter(Artifact.run_id == "r", Artifact.logical_name == "manual.decision")
+            .count()
+        )
         with pytest.raises(Exception, match="approval action not allowed"):
             eng.decide("r", "manual", "nonsense", "admin")
-        after = s.query(ArtifactGeneration).join(Artifact).filter(Artifact.run_id == "r", Artifact.logical_name == "manual.decision").count()
+        after = (
+            s.query(ArtifactGeneration)
+            .join(Artifact)
+            .filter(Artifact.run_id == "r", Artifact.logical_name == "manual.decision")
+            .count()
+        )
         queue = s.query(ApprovalQueue).filter_by(run_id="r", node_id="manual").one()
         run = s.get(WorkflowRun, "r")
         assert before == after == 0
@@ -163,6 +175,8 @@ def test_action_name_approve_with_reject_kind_does_not_publish_approved(tmp_path
         eng = DurableWorkflowEngine(s, tmp_path / "a-reject", runner)
         assert eng.resume("r") == "waiting-approval"
         assert eng.decide("r", "manual", "approve", "admin") == "rejected"
-        approved = s.query(Artifact).filter_by(run_id="r", logical_name="manual.approved").one_or_none()
+        approved = (
+            s.query(Artifact).filter_by(run_id="r", logical_name="manual.approved").one_or_none()
+        )
         assert approved is None
     e.dispose()
