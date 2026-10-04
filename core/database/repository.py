@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -13,7 +13,7 @@ from .models import Base
 T = TypeVar("T", bound=Base)
 
 
-class Repository(Generic[T]):
+class Repository[T: Base]:
     def __init__(self, session: Session, model: type[T]) -> None:
         self.session = session
         self.model = model
