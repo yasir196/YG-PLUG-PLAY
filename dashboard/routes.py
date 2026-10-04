@@ -22,11 +22,13 @@ from core.database.models import (
     Channel,
     ChannelPluginAssignment,
     ChannelRoute,
+    PluginTrustGrant,
     PluginVersion,
     Project,
     ProjectBrief,
     WorkflowRun,
 )
+from core.plugin_registry.registry import PluginRegistry, RegistryError
 from core.workspace.service import WorkspaceService
 
 TEMPLATES = Jinja2Templates(directory=Path(__file__).with_name("templates"))
@@ -168,11 +170,71 @@ def build_dashboard_router(session_dependency: Any, auth_service: AuthService) -
                 select(ChannelPluginAssignment).where(ChannelPluginAssignment.channel_id == cid)
             )
         }
+        trusted = {
+            (grant.plugin_id, grant.plugin_version, grant.package_sha256)
+            for grant in db.scalars(select(PluginTrustGrant).where(PluginTrustGrant.trust_level == "trusted"))
+        }
         return TEMPLATES.TemplateResponse(
             request,
             "plugins.html",
-            context(request, session, channel_id=cid, plugins=rows, assignments=assignments),
+            context(
+                request,
+                session,
+                channel_id=cid,
+                plugins=rows,
+                assignments=assignments,
+                trusted=trusted,
+            ),
         )
+
+    @router.post("/channels/{cid}/plugins/{plugin_id}/{version}/{package_sha}/trust")
+    async def trust_plugin(
+        cid: str,
+        plugin_id: str,
+        version: str,
+        package_sha: str,
+        request: Request,
+        session: Annotated[SessionRecord, Depends(current_session)],
+        db: Annotated[Session, Depends(session_dependency)],
+    ) -> RedirectResponse:
+        form = await _form(request)
+        require_csrf(form, session)
+        try:
+            PluginRegistry(db).grant_trust(
+                plugin_id,
+                version,
+                package_sha,
+                actor_id="admin",
+                actor_is_admin=True,
+            )
+            db.commit()
+        except RegistryError as exc:
+            db.rollback()
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return RedirectResponse(f"/dashboard/channels/{cid}/plugins", status_code=303)
+
+    @router.post("/channels/{cid}/plugins/{plugin_id}/{version}/{package_sha}/assignment")
+    async def assign_plugin(
+        cid: str,
+        plugin_id: str,
+        version: str,
+        package_sha: str,
+        request: Request,
+        session: Annotated[SessionRecord, Depends(current_session)],
+        db: Annotated[Session, Depends(session_dependency)],
+    ) -> RedirectResponse:
+        form = await _form(request)
+        require_csrf(form, session)
+        enabled = form.get("enabled") == "true"
+        try:
+            PluginRegistry(db).assign(
+                cid, plugin_id, version, package_sha, enabled=enabled
+            )
+            db.commit()
+        except RegistryError as exc:
+            db.rollback()
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return RedirectResponse(f"/dashboard/channels/{cid}/plugins", status_code=303)
 
     @router.get("/channels/{cid}/routing", response_class=HTMLResponse)
     def routing(
@@ -184,9 +246,52 @@ def build_dashboard_router(session_dependency: Any, auth_service: AuthService) -
         rows = db.scalars(
             select(ChannelRoute).where(ChannelRoute.channel_id == cid).order_by(ChannelRoute.id)
         ).all()
+        plugins = db.scalars(select(PluginVersion).order_by(PluginVersion.plugin_id)).all()
         return TEMPLATES.TemplateResponse(
-            request, "routing.html", context(request, session, channel_id=cid, routes=rows)
+            request,
+            "routing.html",
+            context(request, session, channel_id=cid, routes=rows, plugins=plugins),
         )
+
+    @router.post("/channels/{cid}/routing")
+    async def save_route(
+        cid: str,
+        request: Request,
+        session: Annotated[SessionRecord, Depends(current_session)],
+        db: Annotated[Session, Depends(session_dependency)],
+    ) -> RedirectResponse:
+        form = await _form(request)
+        require_csrf(form, session)
+        if db.get(Channel, cid) is None:
+            raise HTTPException(status_code=404, detail="channel not found")
+        try:
+            options = json.loads(form.get("options", "{}"))
+        except json.JSONDecodeError as exc:
+            raise HTTPException(status_code=422, detail="route options must be valid JSON") from exc
+        if not isinstance(options, dict):
+            raise HTTPException(status_code=422, detail="route options must be a JSON object")
+        route_id = form.get("route_id")
+        route = db.get(ChannelRoute, int(route_id)) if route_id else None
+        if route is not None and route.channel_id != cid:
+            raise HTTPException(status_code=404, detail="route not found")
+        if route is None:
+            route = ChannelRoute(
+                channel_id=cid,
+                capability=form.get("capability", ""),
+                primary_plugin_id=form.get("plugin_id", ""),
+            )
+            db.add(route)
+        route.capability = form.get("capability", "")
+        route.purpose = form.get("purpose") or None
+        route.variant = form.get("variant") or None
+        route.primary_plugin_id = form.get("plugin_id", "")
+        route.options_json = json.dumps(options, sort_keys=True)
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        return RedirectResponse(f"/dashboard/channels/{cid}/routing", status_code=303)
 
     @router.get("/channels/{cid}/projects", response_class=HTMLResponse)
     def projects(
