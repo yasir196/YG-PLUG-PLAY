@@ -22,7 +22,12 @@ from core.database.models import (
     WorkflowNodeRun,
     WorkflowRun,
 )
-from core.workflow.errors import ApprovalValidationError, WorkflowRuntimeError
+from core.workflow.errors import (
+    ApprovalConflictError,
+    ApprovalNotFoundError,
+    ApprovalValidationError,
+    WorkflowRuntimeError,
+)
 from core.workflow.execution import CapabilityExecution
 from core.workflow.snapshot import freeze_run_snapshot, load_snapshot_node
 
@@ -153,16 +158,17 @@ class DurableWorkflowEngine:
         run = self.session.get(WorkflowRun, run_id)
         if run is None:
             raise WorkflowRuntimeError("run not found")
-        node = load_snapshot_node(self.session, run_id, node_id)
         q = self.session.scalar(
             select(ApprovalQueue).where(
                 ApprovalQueue.run_id == run_id,
                 ApprovalQueue.node_id == node_id,
-                ApprovalQueue.status == "waiting",
             )
         )
         if q is None:
-            raise WorkflowRuntimeError("approval not waiting")
+            raise ApprovalNotFoundError("approval not found")
+        if q.status != "waiting":
+            raise ApprovalConflictError("approval not waiting")
+        node = load_snapshot_node(self.session, run_id, node_id)
         action_spec = node["approval"]["actions"].get(action)
         if action_spec is None:
             raise ApprovalValidationError("approval action not allowed")
@@ -176,7 +182,7 @@ class DurableWorkflowEngine:
         )
         if kind == "edit":
             if target is None or edited_data is None:
-                raise WorkflowRuntimeError("edit requires target and data")
+                raise ApprovalValidationError("edit requires target and data")
             target = self._edit_generation(target, edited_data, actor_id)
             q.artifact_generation_id = target.id
         decision = {

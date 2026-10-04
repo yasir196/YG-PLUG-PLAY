@@ -12,7 +12,12 @@ from sqlalchemy.orm import Session
 
 from core.database.models import ApprovalDecision, ApprovalQueue, ArtifactGeneration
 from core.workflow.engine import DurableWorkflowEngine
-from core.workflow.errors import ApprovalNotFoundError, WorkflowRuntimeError
+from core.workflow.errors import (
+    ApprovalConflictError,
+    ApprovalNotFoundError,
+    ApprovalValidationError,
+    WorkflowRuntimeError,
+)
 from core.workflow.snapshot import load_snapshot_node
 
 
@@ -51,6 +56,8 @@ class ApprovalService:
         edited_data: Any = None,
     ) -> str:
         queue = self._queue(queue_id)
+        if queue.status != "waiting":
+            raise ApprovalConflictError("approval not waiting")
         self._require(queue, actor_roles, is_admin)
         node = self._node(queue)
         requested = action
@@ -61,7 +68,7 @@ class ApprovalService:
         diff: str | None = None
         if kind == "edit":
             if edited_data is None:
-                raise WorkflowRuntimeError("edit requires data")
+                raise ApprovalValidationError("edit requires data")
             old = self._artifact(queue)
             diff = "".join(
                 difflib.unified_diff(
