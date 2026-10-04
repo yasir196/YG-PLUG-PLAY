@@ -218,6 +218,7 @@ class ApprovalDecision(TimestampMixin, Base):
     target_artifact_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     target_generation: Mapped[int | None] = mapped_column(Integer, nullable=True)
     feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
+    diff_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class Artifact(TimestampMixin, Base):
