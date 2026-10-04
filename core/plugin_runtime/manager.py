@@ -7,9 +7,10 @@ import os
 import subprocess
 import threading
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 _ALLOWED_ENV = ("SYSTEMROOT", "WINDIR", "COMSPEC", "TEMP", "TMP", "PATH", "PATHEXT")
 
@@ -33,7 +34,7 @@ class WorkerIdentity:
     channel_id: str
 
 
-def worker_environment(identity: WorkerIdentity, source: dict[str, str] | None = None) -> dict[str, str]:
+def worker_environment(identity: WorkerIdentity, source: Mapping[str, str] | None = None) -> dict[str, str]:
     source = os.environ if source is None else source
     env = {key: source[key] for key in _ALLOWED_ENV if key in source}
     env.update(
@@ -132,9 +133,11 @@ class WorkerProcess:
         result: list[str] = []
         error: list[BaseException] = []
 
+        stdout: TextIO = process.stdout
+
         def read() -> None:
             try:
-                result.append(process.stdout.readline())
+                result.append(stdout.readline())
             except BaseException as exc:
                 error.append(exc)
 
@@ -194,10 +197,11 @@ def _attach_kill_on_close_job(process: subprocess.Popen[str]) -> object | None:
     if not kernel32.SetInformationJobObject(job, 9, ctypes.byref(info), ctypes.sizeof(info)):
         kernel32.CloseHandle(job)
         raise WorkerError("SetInformationJobObject failed")
-    if not kernel32.AssignProcessToJobObject(job, wintypes.HANDLE(process._handle)):
+    process_handle = wintypes.HANDLE(int(process._handle))
+    if not kernel32.AssignProcessToJobObject(job, process_handle):
         kernel32.CloseHandle(job)
         raise WorkerError("AssignProcessToJobObject failed")
-    return job
+    return int(job)
 
 
 def _close_job(job: object | None) -> None:
