@@ -6,8 +6,8 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from core.workflow.approvals import ApprovalAccessError, ApprovalNotFoundError, ApprovalService
-from core.workflow.engine import ApprovalValidationError
+from core.workflow.approvals import ApprovalAccessError, ApprovalService
+from core.workflow.errors import ApprovalNotFoundError, ApprovalValidationError
 
 
 class ApprovalAction(BaseModel):
