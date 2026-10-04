@@ -24,7 +24,7 @@
     "collectionOutput": {
       "allOf": [
         {"$ref": "#/$defs/contractRef"},
-        {"type": "object", "properties": {
+        {"type": "object", "additionalProperties": true, "properties": {
           "collection": {
             "type": "object", "additionalProperties": false,
             "properties": {
