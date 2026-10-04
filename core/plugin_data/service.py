@@ -7,6 +7,7 @@ import os
 import re
 import tempfile
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 
 from core.plugin_runtime.permissions import ExecutionContext
@@ -56,7 +57,7 @@ class PluginDataService:
             return ()
         return tuple(sorted(path.stem for path in base.glob("*.json") if path.is_file()))
 
-    def rpc_handlers(self):
+    def rpc_handlers(self) -> dict[str, Callable[[ExecutionContext, dict[str, Any]], Any]]:
         return {
             "plugin-data.read": lambda ctx, params: self.get(ctx, str(params["key"])),
             "plugin-data.write": lambda ctx, params: self._rpc_write(ctx, params),
