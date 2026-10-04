@@ -40,12 +40,12 @@ def validate_workflow(workflow: Mapping[str, Any]) -> None:
     _check_loop_targets(nodes)
     _check_approval_targets(nodes)
     _check_cycles_bounded(nodes, edges)
+    _check_reachability(start, nodes, edges)
 
     producers = _producers(nodes)
     _check_selectors(nodes, producers)
     _check_contract_compatibility(nodes, producers)
     _check_required_inputs_reachable_on_every_path(start, nodes, edges, producers)
-    _check_reachability(start, nodes, edges)
 
 
 def _fail(message: str) -> None:
@@ -276,9 +276,8 @@ def _check_required_inputs_reachable_on_every_path(
             if not refs:
                 continue
             candidate_producers = {producers[ref].node for ref in refs}
-            path_edges = _dataflow_edges(nodes, edges)
             if not _all_paths_have_candidate(
-                start, node_id, candidate_producers, path_edges, blocked=frozenset({node_id})
+                start, node_id, candidate_producers, edges, blocked=frozenset({node_id})
             ):
                 _fail(
                     f"node {node_id!r} required input {input_name!r} is unreachable "
@@ -289,11 +288,41 @@ def _check_required_inputs_reachable_on_every_path(
             # any candidate in the declared lineage is sufficient on each path.
             if "from" in selector:
                 producer = next(iter(candidate_producers))
+                if _parallel_sibling_producer_is_available(producer, node_id, nodes, edges):
+                    continue
                 if producer not in _ancestors(node_id, predecessors):
                     _fail(
                         f"node {node_id!r} required input {input_name!r} "
                         f"cannot be produced before use"
                     )
+
+
+def _parallel_sibling_producer_is_available(
+    producer: str,
+    consumer: str,
+    nodes: Mapping[str, Mapping[str, Any]],
+    edges: Mapping[str, set[str]],
+) -> bool:
+    """A completed parallel join makes every declared branch output available."""
+
+    for node in nodes.values():
+        if node.get("type") != "parallel":
+            continue
+        branches = {str(x) for x in node.get("branches", [])}
+        join = str(node["join"])
+        if producer not in branches:
+            continue
+        seen: set[str] = set()
+        queue = deque([join])
+        while queue:
+            current = queue.popleft()
+            if current in seen:
+                continue
+            if current == consumer:
+                return True
+            seen.add(current)
+            queue.extend(edges.get(current, set()) - seen)
+    return False
 
 
 def _dataflow_edges(
