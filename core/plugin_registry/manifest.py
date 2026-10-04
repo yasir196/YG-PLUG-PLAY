@@ -118,7 +118,7 @@ class ProvidedCapability(StrictModel):
     features: FeatureSet | None = None
 
     @model_validator(mode="after")
-    def prompt_fields_are_complete(self) -> "ProvidedCapability":
+    def prompt_fields_are_complete(self) -> ProvidedCapability:
         if self.executor == "prompt" and (not self.prompt or self.uses is None):
             raise ValueError("prompt executor requires prompt and uses")
         return self
@@ -147,20 +147,20 @@ class PluginManifest(StrictModel):
     namespace_delegations_requested: list[KebabId] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def niche_manifest_cannot_use_wildcard(self) -> "PluginManifest":
+    def niche_manifest_cannot_use_wildcard(self) -> PluginManifest:
         if self.type == "niche" and "*" in self.compatible_niches:
             raise ValueError("niche plugins cannot declare wildcard compatible_niches")
         return self
 
     @model_validator(mode="after")
-    def validate_compatibility_strings(self) -> "PluginManifest":
+    def validate_compatibility_strings(self) -> PluginManifest:
         for item in self.compatible_niches:
             if isinstance(item, str) and item != "*":
                 raise ValueError("compatible_niches strings may only be '*'")
         return self
 
     @model_validator(mode="after")
-    def validate_relative_paths(self) -> "PluginManifest":
+    def validate_relative_paths(self) -> PluginManifest:
         paths: list[str] = []
         if isinstance(self.runtime, PythonRuntime):
             paths.extend([self.runtime.entrypoint, self.runtime.lock_file])
