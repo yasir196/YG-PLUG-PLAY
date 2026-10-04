@@ -16,6 +16,7 @@ from core.database.models import (
     Project,
     ProjectBrief,
     RunSnapshot,
+    User,
     Workflow,
     WorkflowNodeRun,
     WorkflowRun,
@@ -62,7 +63,13 @@ def setup_run(path: Path):
     Base.metadata.create_all(engine)
     factory = session_factory(engine)
     with factory() as session:
-        session.add_all([Niche(id="n", version="1"), Workflow(id="w", name="W")])
+        session.add_all(
+            [
+                Niche(id="n", version="1"),
+                Workflow(id="w", name="W"),
+                User(id="admin", username="admin"),
+            ]
+        )
         session.flush()
         session.add(Channel(id="c", name="C", niche_id="n", niche_version="1"))
         session.flush()
