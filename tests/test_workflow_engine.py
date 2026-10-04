@@ -14,7 +14,7 @@ WF={"id":"demo","version":1,"start":"write","nodes":[
 def setup(db):
  e=create_sqlite_engine(db);Base.metadata.create_all(e);f=session_factory(e)
  with f() as s:
-  s.add_all([Niche(id="demo",version="1.0.0"),Channel(id="c",name="C",niche_id="demo",niche_version="1.0.0"),Project(id="p",channel_id="c",title="P"),User(id="admin",username="admin"),Workflow(id="demo",name="Demo")]);s.flush()
+  s.add_all([Niche(id="demo",version="1.0.0"),User(id="admin",username="admin"),Workflow(id="demo",name="Demo")]);s.flush();s.add(Channel(id="c",name="C",niche_id="demo",niche_version="1.0.0"));s.flush();s.add(Project(id="p",channel_id="c",title="P"));s.flush()
   w=WorkflowVersion(workflow_id="demo",version=1,definition_json=json.dumps(WF));s.add(w);s.flush()
   s.add_all([ProjectBrief(id="b",project_id="p",generation=1,data_json=json.dumps({"topic":"x"})),WorkflowRun(id="r",project_id="p",workflow_version_id=w.id,status="running",current_node_id="write")]);s.commit()
  return e,f
