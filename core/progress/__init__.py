@@ -1,1 +1,5 @@
-from .service import ProgressService\n
+"""Progress reporting services."""
+
+from .service import ProgressService
+
+__all__ = ["ProgressService"]
