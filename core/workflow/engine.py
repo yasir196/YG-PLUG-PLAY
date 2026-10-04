@@ -12,6 +12,9 @@ from typing import Any, Callable
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from core.workflow.execution import CapabilityExecution
+from core.workflow.snapshot import freeze_run_snapshot
+
 from core.database.models import (
     ApprovalDecision, ApprovalQueue, Artifact, ArtifactGeneration, Project,
     ProjectBrief, WorkflowNodeRun, WorkflowRun, WorkflowVersion,
@@ -32,8 +35,8 @@ class DurableWorkflowEngine:
     def resume(self, run_id: str) -> str:
         run = self.session.get(WorkflowRun, run_id)
         if run is None: raise WorkflowRuntimeError("run not found")
-        wf = self.session.get(WorkflowVersion, run.workflow_version_id)
-        definition = json.loads(wf.definition_json)
+        snapshot = freeze_run_snapshot(self.session, run_id)
+        definition = snapshot["workflow"]
         nodes = {n["id"]: n for n in definition["nodes"]}
         if run.current_node_id is None: run.current_node_id = definition["start"]
         while run.status not in {"success","failed","rejected","cancelled","waiting-approval"}:
@@ -51,9 +54,19 @@ class DurableWorkflowEngine:
         attempt=(self.session.scalar(select(func.max(WorkflowNodeRun.attempt)).where(WorkflowNodeRun.run_id==run.id,WorkflowNodeRun.node_id==node["id"])) or 0)+1
         nr=WorkflowNodeRun(run_id=run.id,node_id=node["id"],attempt=attempt,status="running"); self.session.add(nr); self.session.flush()
         inputs={k:self._select(run.id,s) for k,s in node.get("inputs",{}).items()}
-        result=self.runner(node["capability"],inputs)
+        nr.input_hashes_json=json.dumps({k:self._value_hash(v) for k,v in inputs.items()},sort_keys=True)
+        raw=self.runner(node["capability"],inputs)
+        execution=raw if isinstance(raw,CapabilityExecution) else CapabilityExecution(outputs=raw)
+        nr.provider_plugin_id=execution.provider_plugin_id
+        nr.model=execution.model
+        nr.options_json=json.dumps(execution.options or {},sort_keys=True)
+        nr.usage_json=json.dumps(execution.usage or {},sort_keys=True)
+        output_hashes={}
         for name,spec in node.get("outputs",{}).items():
-            if name in result:self._publish(run.id,node["id"],name,spec["contract"],result[name],"core")
+            if name in execution.outputs:
+                g=self._publish(run.id,node["id"],name,spec["contract"],execution.outputs[name],"core")
+                output_hashes[name]=g.sha256
+        nr.output_hashes_json=json.dumps(output_hashes,sort_keys=True)
         nr.status="success"; run.current_node_id=self._next(node,attempt)
 
     def _next(self,node,attempt):
@@ -138,7 +151,7 @@ class DurableWorkflowEngine:
         data=self._read(g)
         return ({**data,"_generation_id":g.id} if isinstance(data,dict) else data)
 
-    def _logic(self,expr,data):
+    @staticmethod\n    def _value_hash(value):\n        raw=json.dumps(value,ensure_ascii=False,sort_keys=True,separators=(",",":")).encode()\n        return hashlib.sha256(raw).hexdigest()\n\n    def _logic(self,expr,data):
         if not isinstance(expr,dict): return expr
         op,args=next(iter(expr.items())); args=args if isinstance(args,list) else [args]
         vals=[self._logic(a,data) for a in args]
