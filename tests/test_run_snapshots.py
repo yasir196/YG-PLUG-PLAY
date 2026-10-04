@@ -18,6 +18,10 @@ def test_snapshot_is_frozen_and_node_run_records_actual_execution(tmp_path:Path)
   # Freeze before routing is edited, as run-start does.
   from core.workflow.snapshot import freeze_run_snapshot
   snap=freeze_run_snapshot(s,"r");s.commit()
+  assert snap["workflow"]==WF
+  assert snap["channel_id"]=="c"
+  assert snap["routes"][0]["plugin_id"]=="provider"
+  assert snap["routes"][0]["options"]["model"]=="old-model"
   route.options_json='{"model":"new-model"}';s.commit()
   def runner(cap,inputs):
    return CapabilityExecution({"x":"hello"},"provider","old-model",{"model":"old-model"},{"input_tokens":3,"output_tokens":1})
