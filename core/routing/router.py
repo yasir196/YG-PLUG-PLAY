@@ -92,7 +92,9 @@ class PurposeRouter:
         )
 
     @staticmethod
-    def _select(routes, purpose: str | None, variant: str | None):
+    def _select(
+        routes: list[ChannelRoute], purpose: str | None, variant: str | None
+    ) -> ChannelRoute | None:
         if purpose is not None:
             found = next((r for r in routes if r.purpose == purpose), None)
             if found is not None:
@@ -136,7 +138,7 @@ class PurposeRouter:
         return {}
 
     @staticmethod
-    def _validate_contracts(provided, wanted_in: str | None, wanted_out: str | None) -> None:
+    def _validate_contracts(provided: Any, wanted_in: str | None, wanted_out: str | None) -> None:
         if wanted_in is not None and provided.input.contract != wanted_in:
             raise RouteError("input contract incompatible")
         if wanted_out is not None and provided.output.contract != wanted_out:
