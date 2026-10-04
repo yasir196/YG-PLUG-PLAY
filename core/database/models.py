@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, UniqueConstraint
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
@@ -37,6 +37,7 @@ class Niche(TimestampMixin, Base):
     __tablename__ = "niches"
     id: Mapped[str] = mapped_column(String(128), primary_key=True)
     version: Mapped[str] = mapped_column(String(64))
+    channels: Mapped[list["Channel"]] = relationship(back_populates="niche")
 
 
 class Channel(TimestampMixin, Base):
@@ -45,6 +46,7 @@ class Channel(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(200))
     niche_id: Mapped[str | None] = mapped_column(ForeignKey("niches.id"), nullable=True)
     niche_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    niche: Mapped[Niche | None] = relationship(back_populates="channels")
 
 
 class Project(TimestampMixin, Base):
