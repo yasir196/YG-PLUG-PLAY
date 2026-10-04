@@ -11,7 +11,7 @@ CRITERIA={
 1:"tests/integration/test_workspace.py",
 2:"tests/security/test_zip_installer.py",
 3:"tests/security/test_plugin_registry.py",
-4:"tests/test_plugin_registry.py",
+4:"tests/security/test_plugin_registry.py",
 5:"tests/test_purpose_router.py",
 6:"tests/test_prompt_executor.py",
 7:"tests/security/test_zip_installer.py",
@@ -27,7 +27,7 @@ CRITERIA={
 17:"tests/test_run_snapshots.py",
 18:"tests/test_progress.py",
 19:"tests/test_config_data_root.py",
-20:"tests/test_data_root.py",
+20:"tests/test_config_data_root.py",
 }
 @pytest.mark.parametrize("criterion",range(1,21))
 def test_v5_section_56_criterion_has_executable_coverage(criterion:int)->None:
