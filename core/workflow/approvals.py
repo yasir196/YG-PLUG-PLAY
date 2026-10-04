@@ -16,14 +16,15 @@ from core.database.models import (
     ArtifactGeneration,
     RunSnapshot,
 )
-from core.workflow.engine import DurableWorkflowEngine, WorkflowRuntimeError
+from core.workflow.engine import (
+    ApprovalNotFoundError,
+    ApprovalValidationError,
+    DurableWorkflowEngine,
+    WorkflowRuntimeError,
+)
 
 
 class ApprovalAccessError(PermissionError):
-    pass
-
-
-class ApprovalNotFoundError(WorkflowRuntimeError):
     pass
 
 
@@ -68,7 +69,7 @@ class ApprovalService:
         diff: str | None = None
         if kind == "edit":
             if edited_data is None:
-                raise WorkflowRuntimeError("edit requires data")
+                raise ApprovalValidationError("edit requires data")
             old = self._artifact(queue)
             diff = "".join(
                 difflib.unified_diff(
