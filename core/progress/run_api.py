@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Iterator
 from queue import Empty
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
@@ -27,7 +27,7 @@ def build_run_progress_router(
         "/runs/{run_id}/progress", dependencies=[Depends(auth_dependency)]
     )
     def stream(
-        run_id: str, session: Session = Depends(session_dependency)
+        run_id: str, session: Annotated[Session, Depends(session_dependency)]
     ) -> StreamingResponse:
         jobs = list(session.scalars(select(Job).where(Job.run_id == run_id)))
 
@@ -46,9 +46,10 @@ def build_run_progress_router(
                     for job_id, subscriber in subscriptions:
                         try:
                             item = subscriber.get(timeout=0.25)
+                            payload = {"job_id": job_id, **item}
                             yield (
                                 "event: progress\ndata: "
-                                + json.dumps(item, separators=(",", ":"))
+                                + json.dumps(payload, separators=(",", ":"))
                                 + "\n\n"
                             )
                             sent = True
