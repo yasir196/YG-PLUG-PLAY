@@ -14,7 +14,6 @@ from jsonschema import Draft202012Validator
 from sqlalchemy.orm import Session
 
 from core.database.models import Contract
-from core.plugin_registry.manifest import PluginManifest
 from core.routing import PurposeRouter
 
 
