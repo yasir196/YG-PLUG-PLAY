@@ -151,7 +151,17 @@ class DurableWorkflowEngine:
         data=self._read(g)
         return ({**data,"_generation_id":g.id} if isinstance(data,dict) else data)
 
-    @staticmethod\n    def _value_hash(value):\n        raw=json.dumps(value,ensure_ascii=False,sort_keys=True,separators=(",",":")).encode()\n        return hashlib.sha256(raw).hexdigest()\n\n    def _logic(self,expr,data):
+    @staticmethod
+    def _value_hash(value):
+        raw = json.dumps(
+            value,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+        return hashlib.sha256(raw).hexdigest()
+
+    def _logic(self,expr,data):
         if not isinstance(expr,dict): return expr
         op,args=next(iter(expr.items())); args=args if isinstance(args,list) else [args]
         vals=[self._logic(a,data) for a in args]
