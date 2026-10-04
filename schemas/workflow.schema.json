@@ -15,8 +15,8 @@
     "kebab": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"},
     "capability": {"type": "string", "pattern": "^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*/)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"},
     "contract": {"type": "string", "pattern": "^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*/)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)*$"},
-    "target": {"oneOf": [{"$ref": "#/$defs/kebab"}, {"const": "$self"}]},
-    "path": {"type": "string", "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)*$"},
+    "target": {"oneOf": [{"type": "string", "pattern": "^(?!stay$)[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"}, {"const": "$self"}]},
+    "path": {"type": "string", "pattern": "^(?!inputs\\.)[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)*$"},
     "contractRef": {
       "type": "object", "additionalProperties": false, "required": ["contract", "version"],
       "properties": {"contract": {"$ref": "#/$defs/contract"}, "version": {"type": "string", "minLength": 1}}
