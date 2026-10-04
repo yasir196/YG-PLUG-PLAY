@@ -28,7 +28,7 @@ def test_fresh_database_migrates_up_and_down(tmp_path) -> None:
     cfg = alembic_config(str(db))
     command.upgrade(cfg, "head")
     engine = create_sqlite_engine(db)
-    assert EXPECTED <= set(inspect(engine).get_table_names())
+    assert set(inspect(engine).get_table_names()) >= EXPECTED
     with engine.connect() as connection:
         assert connection.execute(text("PRAGMA journal_mode")).scalar_one().lower() == "wal"
     engine.dispose()
