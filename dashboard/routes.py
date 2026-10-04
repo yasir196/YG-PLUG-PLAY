@@ -1,7 +1,5 @@
 """Server-rendered Jinja2 + HTMX dashboard for the Phase-1a demo flow."""
 
-from __future__ import annotations
-
 import json
 import secrets
 from pathlib import Path
