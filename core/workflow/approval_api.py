@@ -50,7 +50,7 @@ def build_approval_router(
     def act(
         queue_id: int,
         body: ApprovalAction,
-        svc: ApprovalService = Depends(service_dependency),
+        svc: Annotated[ApprovalService, Depends(service_dependency)],
     ) -> dict[str, str]:
         try:
             actor_roles, admin = roles()
