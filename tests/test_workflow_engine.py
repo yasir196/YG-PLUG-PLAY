@@ -21,7 +21,7 @@ from core.database.models import (
     WorkflowRun,
     WorkflowVersion,
 )
-from core.workflow import ApprovalValidationError, DurableWorkflowEngine
+from core.workflow import ApprovalNotFoundError, ApprovalValidationError, DurableWorkflowEngine
 
 WF = {
     "id": "demo",
@@ -222,4 +222,30 @@ def test_request_revision_without_required_comment_can_retry(tmp_path: Path):
         eng = DurableWorkflowEngine(s, tmp_path / "a-retry", runner)
         assert eng.resume("r") == "waiting-approval"
         assert eng.decide("r", "manual", "retry-failed", "admin") == "waiting-approval"
+    e.dispose()
+
+
+def test_missing_approval_node_is_typed_not_found(tmp_path: Path):
+    e, f = setup(tmp_path / "missing-node.db")
+    with f() as s:
+        eng = DurableWorkflowEngine(s, tmp_path / "a-missing-node", runner)
+        assert eng.resume("r") == "waiting-approval"
+        with pytest.raises(ApprovalNotFoundError, match="approval node not found"):
+            eng.decide("r", "does-not-exist", "approve", "admin")
+        queue = s.query(ApprovalQueue).filter_by(run_id="r", node_id="manual").one()
+        assert queue.status == "waiting"
+    e.dispose()
+
+
+def test_edit_without_data_is_validation_error_before_mutation(tmp_path: Path):
+    e, f = setup(tmp_path / "edit-without-data.db")
+    with f() as s:
+        eng = DurableWorkflowEngine(s, tmp_path / "a-edit-without-data", runner)
+        assert eng.resume("r") == "waiting-approval"
+        with pytest.raises(ApprovalValidationError, match="edit requires target and data"):
+            eng.decide("r", "manual", "edit", "admin")
+        queue = s.query(ApprovalQueue).filter_by(run_id="r", node_id="manual").one()
+        run = s.get(WorkflowRun, "r")
+        assert queue.status == "waiting"
+        assert run is not None and run.status == "waiting-approval"
     e.dispose()
