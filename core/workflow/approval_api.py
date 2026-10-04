@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -29,14 +29,14 @@ def build_approval_router(
 
     @router.get("", dependencies=[Depends(auth_dependency)])
     def listing(
-        svc: ApprovalService = Depends(service_dependency),
+        svc: Annotated[ApprovalService, Depends(service_dependency)],
     ) -> list[dict[str, Any]]:
         actor_roles, admin = roles()
         return svc.list(actor_roles, admin)
 
     @router.get("/{queue_id}", dependencies=[Depends(auth_dependency)])
     def view(
-        queue_id: int, svc: ApprovalService = Depends(service_dependency)
+        queue_id: int, svc: Annotated[ApprovalService, Depends(service_dependency)]
     ) -> dict[str, Any]:
         try:
             actor_roles, admin = roles()
