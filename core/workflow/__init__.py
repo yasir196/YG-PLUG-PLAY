@@ -1,8 +1,9 @@
 """Durable Phase-1a workflow runtime."""
 
-from .approvals import ApprovalAccessError, ApprovalNotFoundError, ApprovalService
+from .approvals import ApprovalAccessError, ApprovalService
 from .engine import (
     ApprovalConflictError,
+    ApprovalNotFoundError,
     ApprovalValidationError,
     DurableWorkflowEngine,
     WorkflowRuntimeError,
