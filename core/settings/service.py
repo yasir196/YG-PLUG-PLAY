@@ -6,7 +6,6 @@ import json
 from typing import Any, cast
 
 from jsonschema import Draft202012Validator
-from jsonschema.exceptions import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
