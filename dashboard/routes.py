@@ -50,7 +50,9 @@ def build_dashboard_router(session_dependency: Any, auth_service: AuthService) -
         except ValueError as exc:
             raise HTTPException(status_code=401, detail=str(exc)) from exc
 
-    def context(request: Request, session: SessionRecord | None = None, **values: Any) -> dict[str, Any]:
+    def context(
+        request: Request, session: SessionRecord | None = None, **values: Any
+    ) -> dict[str, Any]:
         return {"request": request, "session": session, **values}
 
     def require_csrf(form: dict[str, str], session: SessionRecord) -> None:
@@ -172,7 +174,9 @@ def build_dashboard_router(session_dependency: Any, auth_service: AuthService) -
         }
         trusted = {
             (grant.plugin_id, grant.plugin_version, grant.package_sha256)
-            for grant in db.scalars(select(PluginTrustGrant).where(PluginTrustGrant.trust_level == "trusted"))
+            for grant in db.scalars(
+                select(PluginTrustGrant).where(PluginTrustGrant.trust_level == "trusted")
+            )
         }
         return TEMPLATES.TemplateResponse(
             request,
@@ -227,9 +231,7 @@ def build_dashboard_router(session_dependency: Any, auth_service: AuthService) -
         require_csrf(form, session)
         enabled = form.get("enabled") == "true"
         try:
-            PluginRegistry(db).assign(
-                cid, plugin_id, version, package_sha, enabled=enabled
-            )
+            PluginRegistry(db).assign(cid, plugin_id, version, package_sha, enabled=enabled)
             db.commit()
         except RegistryError as exc:
             db.rollback()
