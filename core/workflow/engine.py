@@ -5,9 +5,10 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -20,7 +21,6 @@ from core.database.models import (
     ApprovalQueue,
     Artifact,
     ArtifactGeneration,
-    Project,
     ProjectBrief,
     WorkflowNodeRun,
     WorkflowRun,
@@ -186,7 +186,7 @@ class DurableWorkflowEngine:
             "actor": actor_id,
             "target_artifact": target.artifact_id if target else None,
             "target_generation": target.generation if target else None,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "feedback": feedback,
         }
         self._publish(run_id, node_id, "decision", "approval.decision", decision, actor_id)
