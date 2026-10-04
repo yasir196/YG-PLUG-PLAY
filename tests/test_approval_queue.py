@@ -154,4 +154,15 @@ def test_invalid_action_api_returns_422(tmp_path: Path):
         missing = TestClient(app).post("/api/approvals/999999/actions", json={"action": "approve"})
         assert missing.status_code == 404
         assert missing.json()["detail"] == "approval not found"
+
+        missing_view = TestClient(app).get("/api/approvals/999999")
+        assert missing_view.status_code == 404
+        assert missing_view.json()["detail"] == "approval not found"
+
+        edit_without_data = TestClient(app).post(
+            f"/api/approvals/{qid}/actions", json={"action": "edit"}
+        )
+        assert edit_without_data.status_code == 422
+        assert edit_without_data.json()["detail"] == "edit requires data"
+        assert svc.view(qid, {"editor"})["status"] == "waiting"
     e.dispose()
