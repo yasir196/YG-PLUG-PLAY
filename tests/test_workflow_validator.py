@@ -6,7 +6,15 @@ from typing import Any
 import pytest
 
 from core.workflow import WorkflowValidationError, validate_workflow
-from tests.schemas.test_workflow_schema import corrected_v5_workflow
+import importlib.util
+from pathlib import Path
+
+_fixture_path = Path(__file__).parent / "schemas" / "test_workflow_schema.py"
+_spec = importlib.util.spec_from_file_location("workflow_schema_fixture", _fixture_path)
+assert _spec is not None and _spec.loader is not None
+_fixture_module = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_fixture_module)
+corrected_v5_workflow = _fixture_module.corrected_v5_workflow
 
 
 def node(workflow: dict[str, Any], node_id: str) -> dict[str, Any]:
