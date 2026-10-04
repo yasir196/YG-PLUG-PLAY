@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
 from core.auth.service import AuthService
+from core.database import session_factory
+from core.database.models import Plugin, PluginVersion
 from dashboard.app import create_dashboard_app
 
 
@@ -100,11 +103,7 @@ def test_dashboard_can_grant_trust_enable_plugin_and_edit_route(tmp_path: Path) 
     )
     channel_url = created.headers["location"]
     app = client.app
-    factory = __import__("core.database", fromlist=["session_factory"]).session_factory(
-        app.state.db_engine
-    )
-    import json
-    from core.database.models import Plugin, PluginVersion
+    factory = session_factory(app.state.db_engine)
 
     root = Path(__file__).parents[1]
     raw = json.loads((root / "plugins/demo-text-provider/plugin.json").read_text(encoding="utf-8"))
