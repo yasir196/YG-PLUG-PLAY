@@ -55,6 +55,3 @@ def create_dashboard_app(
 
     app.include_router(build_dashboard_router(db_session, auth_service))
     return app
-
-
-app = create_dashboard_app()
