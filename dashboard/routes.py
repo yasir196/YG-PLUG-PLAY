@@ -95,8 +95,8 @@ def build_dashboard_router(session_dependency: Any, auth_service: AuthService) -
     @router.post("/logout")
     async def logout(
         request: Request,
+        session: Annotated[SessionRecord, Depends(current_session)],
         session_token: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
-        session: Annotated[SessionRecord, Depends(current_session)] = None,
     ) -> RedirectResponse:
         form = await _form(request)
         require_csrf(form, session)
