@@ -1,0 +1,5 @@
+{% extends "base.html" %}{% block title %}Projects{% endblock %}{% block content %}
+<h1>Projects</h1><p><a href="/dashboard/channels/{{ channel_id }}">← Channel</a></p>
+<div class="card"><h2>Create Project</h2><form method="post" action="/dashboard/channels/{{ channel_id }}/projects"><input type="hidden" name="_csrf" value="{{ session.csrf_token }}"><label>Title</label><input name="title" required><button>Create Project</button></form></div>
+{% for project in projects %}<div class="card"><a href="/dashboard/projects/{{ project.id }}"><strong>{{ project.title }}</strong></a><div class="muted">{{ project.status }}</div></div>{% else %}<p>No projects yet.</p>{% endfor %}
+{% endblock %}
