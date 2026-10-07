@@ -155,6 +155,31 @@ work re-enables the installed-wheel smoke step in CI. Until then the
 wheel-contents check remains active and import-time resource reads must not be
 added.
 
+## E15 — Frozen run routing and provider identity (Cycle A, PR #7)
+
+Run snapshots freeze configuration; safety state stays live and fails closed.
+
+Frozen at run start (per snapshot route entry): route selection and stable
+`route_id`, route options, and a `provider` block with
+`{version, package_sha256, settings}`.
+
+Live at every resolution: enabled Channel assignment, SHA-bound trust, niche
+compatibility and package availability for the frozen identity.
+
+Failure contract (`RouteError`):
+- `snapshot route identity missing`: the selected frozen route lacks `route_id`.
+- `snapshot provider identity missing`: the selected frozen route lacks a valid provider block.
+- `provider changed since run start`: the live assigned package differs in version or SHA.
+- `provider is not enabled for Channel` / `provider unavailable: <reasons>`: live safety checks.
+
+Only the selected frozen route is validated; unselected legacy entries do not
+block resolution. Live setting changes do not affect a running snapshot.
+
+Known limits: assignments pin a version only, so the latest installed package of
+that version is the live identity (SHA-bound assignment is backlog). No
+production caller passes `frozen_routes` yet; engine/PromptExecutor wiring and
+the snapshot-to-Channel check are Cycle C.
+
 ## Canonical corrections to V5 examples
 
 Apply these substitutions when implementing V5 examples:

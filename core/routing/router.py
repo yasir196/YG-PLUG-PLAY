@@ -9,7 +9,12 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from core.database.models import ChannelRoute, PluginSetting, PluginVersion
+from core.database.models import (
+    ChannelPluginAssignment,
+    ChannelRoute,
+    PluginSetting,
+    PluginVersion,
+)
 from core.plugin_registry.manifest import PluginManifest
 from core.plugin_registry.registry import PluginRegistry
 
@@ -28,6 +33,45 @@ class ResolvedRoute:
     options: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class _RouteChoice:
+    route_id: int | None
+    purpose: str | None
+    variant: str | None
+    plugin_id: str
+    options_json: str
+    provider: Any = None
+
+
+def _latest_package(session: Session, plugin_id: str, version: str) -> PluginVersion | None:
+    # Single source of the "current package" rule: assignments pin a version only,
+    # so the most recently installed package of that version is the live identity.
+    return session.scalar(
+        select(PluginVersion)
+        .where(
+            PluginVersion.plugin_id == plugin_id,
+            PluginVersion.version == version,
+        )
+        .order_by(PluginVersion.id.desc())
+    )
+
+
+def current_provider_package(
+    session: Session, channel_id: str, plugin_id: str
+) -> PluginVersion | None:
+    """Enabled Channel assignment resolved to its current package, or None."""
+    assignment = session.scalar(
+        select(ChannelPluginAssignment).where(
+            ChannelPluginAssignment.channel_id == channel_id,
+            ChannelPluginAssignment.plugin_id == plugin_id,
+            ChannelPluginAssignment.enabled.is_(True),
+        )
+    )
+    if assignment is None:
+        return None
+    return _latest_package(session, plugin_id, assignment.plugin_version)
+
+
 class PurposeRouter:
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -44,29 +88,23 @@ class PurposeRouter:
         input_contract: str | None = None,
         output_contract: str | None = None,
         explicit_options: dict[str, Any] | None = None,
+        frozen_routes: list[dict[str, Any]] | None = None,
     ) -> ResolvedRoute:
-        routes = list(
-            self.session.scalars(
-                select(ChannelRoute).where(
-                    ChannelRoute.channel_id == channel_id,
-                    ChannelRoute.capability == capability,
-                )
-            )
+        candidates = (
+            self._frozen_candidates(frozen_routes, capability)
+            if frozen_routes is not None
+            else self._live_candidates(channel_id, capability)
         )
-        route = self._select(routes, purpose, variant)
+        route = self._select(candidates, purpose, variant)
         if route is None:
             raise RouteError("route missing")
-        version = self._assigned_version(channel_id, route.primary_plugin_id)
-        item = self.session.scalar(
-            select(PluginVersion)
-            .where(
-                PluginVersion.plugin_id == route.primary_plugin_id,
-                PluginVersion.version == version,
-            )
-            .order_by(PluginVersion.id.desc())
-        )
-        if item is None:
-            raise RouteError("provider package is not installed")
+        if route.route_id is None:
+            raise RouteError("snapshot route identity missing")
+        frozen_settings: dict[str, Any] | None = None
+        if frozen_routes is not None:
+            item, frozen_settings = self._frozen_provider(channel_id, route)
+        else:
+            item = self._live_provider(channel_id, route.plugin_id)
         availability = self.plugins.effective_availability(
             channel_id, item.plugin_id, item.version, item.package_sha256
         )
@@ -79,11 +117,13 @@ class PurposeRouter:
         self._validate_contracts(provided, input_contract, output_contract)
         self._validate_features(provided.features or {}, required_features or {})
         defaults = self._plugin_defaults(manifest)
-        channel_settings = self._channel_settings(channel_id, item.plugin_id)
-        route_options = json.loads(route.options_json or "{}")
+        channel_settings = frozen_settings
+        if channel_settings is None:
+            channel_settings = self._channel_settings(channel_id, item.plugin_id)
+        route_options = json.loads(route.options_json)
         options = defaults | channel_settings | route_options | (explicit_options or {})
         return ResolvedRoute(
-            route_id=route.id,
+            route_id=route.route_id,
             plugin_id=item.plugin_id,
             plugin_version=item.version,
             package_sha256=item.package_sha256,
@@ -91,10 +131,72 @@ class PurposeRouter:
             options=options,
         )
 
+    def _live_provider(self, channel_id: str, plugin_id: str) -> PluginVersion:
+        version = self._assigned_version(channel_id, plugin_id)
+        item = _latest_package(self.session, plugin_id, version)
+        if item is None:
+            raise RouteError("provider package is not installed")
+        return item
+
+    def _frozen_provider(
+        self, channel_id: str, route: _RouteChoice
+    ) -> tuple[PluginVersion, dict[str, Any]]:
+        frozen = route.provider
+        if not (
+            isinstance(frozen, dict)
+            and isinstance(frozen.get("version"), str)
+            and isinstance(frozen.get("package_sha256"), str)
+            and isinstance(frozen.get("settings"), dict)
+        ):
+            raise RouteError("snapshot provider identity missing")
+        # Safety state stays live: the assignment must still be enabled (raises otherwise).
+        item = self._live_provider(channel_id, route.plugin_id)
+        if (item.version, item.package_sha256) != (
+            frozen["version"],
+            frozen["package_sha256"],
+        ):
+            raise RouteError("provider changed since run start")
+        return item, dict(frozen["settings"])
+
+    def _live_candidates(self, channel_id: str, capability: str) -> list[_RouteChoice]:
+        rows = self.session.scalars(
+            select(ChannelRoute).where(
+                ChannelRoute.channel_id == channel_id,
+                ChannelRoute.capability == capability,
+            )
+        )
+        return [
+            _RouteChoice(
+                route_id=row.id,
+                purpose=row.purpose,
+                variant=row.variant,
+                plugin_id=row.primary_plugin_id,
+                options_json=row.options_json or "{}",
+            )
+            for row in rows
+        ]
+
+    @staticmethod
+    def _frozen_candidates(routes: list[dict[str, Any]], capability: str) -> list[_RouteChoice]:
+        # Identity is validated only on the selected route (A1 contract); unselected
+        # legacy entries without route_id must not block resolution.
+        return [
+            _RouteChoice(
+                route_id=entry.get("route_id"),
+                purpose=entry.get("purpose"),
+                variant=entry.get("variant"),
+                plugin_id=str(entry.get("plugin_id") or ""),
+                options_json=json.dumps(entry.get("options") or {}, sort_keys=True),
+                provider=entry.get("provider"),
+            )
+            for entry in routes
+            if entry.get("capability") == capability
+        ]
+
     @staticmethod
     def _select(
-        routes: list[ChannelRoute], purpose: str | None, variant: str | None
-    ) -> ChannelRoute | None:
+        routes: list[_RouteChoice], purpose: str | None, variant: str | None
+    ) -> _RouteChoice | None:
         if purpose is not None:
             found = next((r for r in routes if r.purpose == purpose), None)
             if found is not None:
@@ -106,8 +208,6 @@ class PurposeRouter:
         return next((r for r in routes if r.purpose is None and r.variant is None), None)
 
     def _assigned_version(self, channel_id: str, plugin_id: str) -> str:
-        from core.database.models import ChannelPluginAssignment
-
         assignment = self.session.scalar(
             select(ChannelPluginAssignment).where(
                 ChannelPluginAssignment.channel_id == channel_id,
