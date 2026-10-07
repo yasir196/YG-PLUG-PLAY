@@ -16,7 +16,7 @@ from core.database.models import (
     WorkflowRun,
     WorkflowVersion,
 )
-from core.routing.router import current_provider_package
+from core.plugin_registry.providers import current_provider_package
 from core.workflow.errors import ApprovalNotFoundError, WorkflowRuntimeError
 
 

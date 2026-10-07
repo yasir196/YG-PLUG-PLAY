@@ -180,6 +180,47 @@ that version is the live identity (SHA-bound assignment is backlog). No
 production caller passes `frozen_routes` yet; engine/PromptExecutor wiring and
 the snapshot-to-Channel check are Cycle C.
 
+## E16 — Fail-closed capability provider resolution (Cycle B, PR #8)
+
+`resolve_capability_provider(session, channel_id, capability)` in
+`core/plugin_registry/providers.py` returns the single package that provides
+a capability for a Channel, or fails closed.
+
+Candidate set: the Channel's pinned niche package plus every enabled Channel
+assignment, each resolved to its current package (latest installed package
+of the pinned/assigned version, the same rule as E15). Disabled assignments
+are not candidates. Candidates are deduplicated by package identity
+`(plugin_id, version, package_sha256)`, so a niche that is also assigned
+counts once, and are sorted so DB/install order never affects the outcome.
+A candidate matches when its manifest `provides` declares the capability.
+
+Result: `CapabilityProvider` with `plugin_id`, `version`, `package_sha256`
+and the matching `ProvidedCapability`, the identity a run may freeze.
+
+Failure contract (`ProviderResolutionError`, a `ValueError`):
+- `channel not found`
+- `no capability provider`: zero matching candidates.
+- `ambiguous capability provider: <ids>`: more than one matching package;
+  plugin IDs sorted and comma-separated.
+- `ambiguous capability declaration: <plugin_id>`: one package declares the
+  capability more than once.
+
+Boundary: resolution decides provider ownership only. Trust, availability and
+route selection (purpose/variant) are not discovery criteria; they remain
+live `PurposeRouter` checks (E15).
+
+Relation to E1: the runtime registry accepts identical duplicate capability
+registrations without conflict (Cycle 0 evidence), so the registry does not
+determine an executable provider. Ambiguity is rejected here instead.
+
+Known limits: two versions of the same plugin as candidates (for example niche
+pin `demo@1.0.0` plus assignment `demo@1.1.0`) fail closed with
+`ambiguous capability provider: demo, demo`; clearer messaging and SHA-bound
+assignment/niche pins are backlog. The demo channel currently has
+`demo/writing` declared by both the `demo` niche and `demo-prompts`, so
+resolution is ambiguous until the ownership cleanup. No production caller
+uses the resolver yet (Cycle C).
+
 ## Canonical corrections to V5 examples
 
 Apply these substitutions when implementing V5 examples:
