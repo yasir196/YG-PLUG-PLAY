@@ -130,6 +130,31 @@ Approval comment requirements are declarative per action through optional `requi
 
 API mapping distinguishes approval validation from runtime faults: invalid approval decisions use `ApprovalValidationError` and map to HTTP 422; a missing approval queue maps to HTTP 404; unrelated runtime faults are not reclassified as validation errors.
 
+## E14 — Phase-1a execution mode and deferred resource packaging
+
+Phase-1a is supported from an editable checkout (`uv sync --dev`). Running Core
+or the dashboard from an installed wheel is not a Phase-1a deliverable and is not
+a T1.19/T1.20 acceptance criterion.
+
+Evidence: CI #305 (commit `ffde3fc`) built the wheel, verified its 15 required
+dashboard/core members, installed it into a fresh venv outside the repository and
+failed at import with `FileNotFoundError` for
+`contracts/standard/schemas/project.brief.schema.json`. This is a real
+installed-distribution defect, not an irrelevant failure.
+
+Confirmed runtime dependencies on repository-level resources:
+
+- `contracts/standard/` — `core/workspace/service.py` (read at import time)
+- `niches/demo/` — `core/workspace/defaults.py` (demo workflow and routes)
+- `schemas/` — `tools/yg/cli.py`; caller-supplied paths in
+  `core/plugin_registry/installer.py` and `registries.py`
+
+Resource packaging is deferred to dedicated work, which must choose between
+package-data/package-dir mapping and relocation using tests and evidence. That
+work re-enables the installed-wheel smoke step in CI. Until then the
+wheel-contents check remains active and import-time resource reads must not be
+added.
+
 ## Canonical corrections to V5 examples
 
 Apply these substitutions when implementing V5 examples:
