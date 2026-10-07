@@ -10,6 +10,7 @@ import typer
 
 from core.plugin_registry import packing
 from core.plugin_registry.manifest import PluginManifest
+from core.plugin_registry.packing import PackageError
 
 app = typer.Typer(help="YG-PLUG-PLAY developer tools.")
 plugin_app = typer.Typer(help="Validate and pack plugin/niche packages.")
@@ -21,7 +22,6 @@ app.add_typer(project_app, name="project")
 
 ROOT = Path(__file__).resolve().parents[2]
 PLUGIN_SCHEMA = ROOT / "schemas" / "plugin.schema.json"
-PackageError = packing.PackageError
 
 
 def validate_package(package_dir: Path) -> PluginManifest:
