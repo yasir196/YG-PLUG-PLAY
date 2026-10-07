@@ -10,7 +10,8 @@ import typer
 
 from core.plugin_registry import packing
 from core.plugin_registry.manifest import PluginManifest
-from core.plugin_registry.packing import PackageError
+
+PackageError = packing.PackageError
 
 app = typer.Typer(help="YG-PLUG-PLAY developer tools.")
 plugin_app = typer.Typer(help="Validate and pack plugin/niche packages.")
