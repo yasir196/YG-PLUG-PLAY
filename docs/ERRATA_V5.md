@@ -221,6 +221,44 @@ assignment/niche pins are backlog. The demo channel currently has
 resolution is ambiguous until the ownership cleanup. No production caller
 uses the resolver yet (Cycle C).
 
+## E17 — Single owner for demo/writing (ownership cleanup, PR #9)
+
+Supersedes the E16 known limit that demo/writing is declared by both the
+demo niche and demo-prompts. E16 text is retained as the historical
+record at the time of Cycle B.
+
+Owner: plugins/demo-prompts is the sole declaring package for
+demo/writing (purpose demo-writing, prompt prompts/writing.md, rule
+rules/style.md). The demo niche keeps demo/brief-ready only.
+
+Removed from niches/demo: the demo/writing manifest entry and its
+assets prompts/writing.md, rules/writing-context.md and
+rules/writing-output.json. Removing the niche prompt file is required,
+not cosmetic: PromptExecutor._prompt_path() checks the niche root before
+the plugin root, so a remaining niche prompts/writing.md would silently
+override the owning plugin's prompt.
+
+Evidence:
+- C1 2cdb46d, CI #326 GREEN: prompt-executor test retargeted to
+  demo-prompts before any behavior change.
+- C2 66e78b4, CI #328 accepted RED (3 failed, 262 passed): single
+  declaring package, real-package resolver returned
+  ambiguous capability provider: demo, demo-prompts, and the prompt
+  resolved to the niche file. Guard demo/brief-ready stayed with the
+  niche.
+- C3 8785934, CI #329 GREEN (265 passed): data/asset-only change; no
+  tests/, core/ or plugins/ change.
+
+Known limits (not fixed here):
+- materialize_demo_defaults() does not assign demo-prompts to a new
+  demo Channel. After this cleanup demo/writing on such a Channel
+  resolves to no capability provider until demo-prompts is assigned.
+  Required before run-start wiring (Cycle C/D).
+- Demo script contract shape vs demo-provider string output is a separate
+  Cycle C blocker.
+- Several demo prompt assets end with a literal backslash-n character
+  sequence instead of a newline; asset hygiene backlog.
+
 ## Canonical corrections to V5 examples
 
 Apply these substitutions when implementing V5 examples:
