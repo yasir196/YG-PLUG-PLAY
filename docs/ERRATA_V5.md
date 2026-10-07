@@ -259,6 +259,27 @@ Known limits (not fixed here):
 - Several demo prompt assets end with a literal backslash-n character
   sequence instead of a newline; asset hygiene backlog.
 
+## E18 — Unbootstrapped checkout installs no demo packages (Cycle C-alpha, PR #10)
+
+Corrects the first E17 known limit. The gap is not only a missing demo-prompts Channel assignment: in checkout mode no bundled demo package is installed at all.
+
+Observed on 998c882, characterized by tests/integration/test_demo_checkout_gap.py (merged in fa258c8):
+- WorkspaceService.create_channel for niche demo 1.0.0 creates Niche, Workflow, WorkflowVersion and ChannelRoute rows and a bare Plugin row for demo-text-provider, but no PluginVersion row for any package.
+- The demo niche pin therefore resolves to no installed package, so both demo/brief-ready and demo/writing resolve to no capability provider.
+- demo-text-provider effective availability is package-not-installed.
+- The dashboard plugins page lists PluginVersion rows only and is empty in this state.
+
+Evidence: CI #332 GREEN (269 passed, test_demo_checkout_gap.py 4/4); main CI #333 on fa258c8 GREEN.
+
+Planned resolution (not implemented here; no outcome is claimed):
+- C-beta: deterministic packing moves from tools into core without behavior change.
+- C-gamma: an explicit, idempotent bootstrap installs demo, demo-prompts and demo-text-provider in that order through the ZIP installer into the data-root packages directory. It grants no trust and creates no assignment.
+- C-delta: demo Channel creation fails closed with a ValueError subclass (dashboard 422) when the pinned niche or demo-prompts is not installed, and assigns demo-prompts by its installed identity.
+
+Identity rule: a bundled package's identity is the SHA-256 of its packed ZIP as computed by the installer. No separate repository-file hash is introduced. The repository has no .gitattributes, so tests must not hardcode package SHAs.
+
+The C-alpha characterization tests are expected to change intentionally in C-gamma and C-delta.
+
 ## Canonical corrections to V5 examples
 
 Apply these substitutions when implementing V5 examples:
