@@ -28,6 +28,15 @@ class ResolvedRoute:
     options: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class _RouteChoice:
+    route_id: int | None
+    purpose: str | None
+    variant: str | None
+    plugin_id: str
+    options_json: str
+
+
 class PurposeRouter:
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -44,23 +53,23 @@ class PurposeRouter:
         input_contract: str | None = None,
         output_contract: str | None = None,
         explicit_options: dict[str, Any] | None = None,
+        frozen_routes: list[dict[str, Any]] | None = None,
     ) -> ResolvedRoute:
-        routes = list(
-            self.session.scalars(
-                select(ChannelRoute).where(
-                    ChannelRoute.channel_id == channel_id,
-                    ChannelRoute.capability == capability,
-                )
-            )
+        candidates = (
+            self._frozen_candidates(frozen_routes, capability)
+            if frozen_routes is not None
+            else self._live_candidates(channel_id, capability)
         )
-        route = self._select(routes, purpose, variant)
+        route = self._select(candidates, purpose, variant)
         if route is None:
             raise RouteError("route missing")
-        version = self._assigned_version(channel_id, route.primary_plugin_id)
+        if route.route_id is None:
+            raise RouteError("snapshot route identity missing")
+        version = self._assigned_version(channel_id, route.plugin_id)
         item = self.session.scalar(
             select(PluginVersion)
             .where(
-                PluginVersion.plugin_id == route.primary_plugin_id,
+                PluginVersion.plugin_id == route.plugin_id,
                 PluginVersion.version == version,
             )
             .order_by(PluginVersion.id.desc())
@@ -80,10 +89,10 @@ class PurposeRouter:
         self._validate_features(provided.features or {}, required_features or {})
         defaults = self._plugin_defaults(manifest)
         channel_settings = self._channel_settings(channel_id, item.plugin_id)
-        route_options = json.loads(route.options_json or "{}")
+        route_options = json.loads(route.options_json)
         options = defaults | channel_settings | route_options | (explicit_options or {})
         return ResolvedRoute(
-            route_id=route.id,
+            route_id=route.route_id,
             plugin_id=item.plugin_id,
             plugin_version=item.version,
             package_sha256=item.package_sha256,
@@ -91,10 +100,44 @@ class PurposeRouter:
             options=options,
         )
 
+    def _live_candidates(self, channel_id: str, capability: str) -> list[_RouteChoice]:
+        rows = self.session.scalars(
+            select(ChannelRoute).where(
+                ChannelRoute.channel_id == channel_id,
+                ChannelRoute.capability == capability,
+            )
+        )
+        return [
+            _RouteChoice(
+                route_id=row.id,
+                purpose=row.purpose,
+                variant=row.variant,
+                plugin_id=row.primary_plugin_id,
+                options_json=row.options_json or "{}",
+            )
+            for row in rows
+        ]
+
+    @staticmethod
+    def _frozen_candidates(routes: list[dict[str, Any]], capability: str) -> list[_RouteChoice]:
+        # Identity is validated only on the selected route (A1 contract); unselected
+        # legacy entries without route_id must not block resolution.
+        return [
+            _RouteChoice(
+                route_id=entry.get("route_id"),
+                purpose=entry.get("purpose"),
+                variant=entry.get("variant"),
+                plugin_id=str(entry.get("plugin_id") or ""),
+                options_json=json.dumps(entry.get("options") or {}, sort_keys=True),
+            )
+            for entry in routes
+            if entry.get("capability") == capability
+        ]
+
     @staticmethod
     def _select(
-        routes: list[ChannelRoute], purpose: str | None, variant: str | None
-    ) -> ChannelRoute | None:
+        routes: list[_RouteChoice], purpose: str | None, variant: str | None
+    ) -> _RouteChoice | None:
         if purpose is not None:
             found = next((r for r in routes if r.purpose == purpose), None)
             if found is not None:
