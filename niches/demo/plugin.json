@@ -33,33 +33,6 @@
         "contract": "script",
         "version": "^1.0"
       }
-    },
-    {
-      "capability": "demo/writing",
-      "executor": "prompt",
-      "prompt": "prompts/writing.md",
-      "rules": [
-        {
-          "type": "prompt-context",
-          "path": "rules/writing-context.md"
-        },
-        {
-          "type": "validator",
-          "path": "rules/writing-output.json"
-        }
-      ],
-      "uses": {
-        "capability": "text-generation",
-        "purpose": "demo/writing"
-      },
-      "input": {
-        "contract": "project.brief",
-        "version": "^1.0"
-      },
-      "output": {
-        "contract": "script",
-        "version": "^1.0"
-      }
     }
   ]
 }
