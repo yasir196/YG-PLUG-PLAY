@@ -26,9 +26,9 @@ def test_demo_writing_runs_end_to_end_through_demo_provider(tmp_path: Path) -> N
     Base.metadata.create_all(engine)
     factory = session_factory(engine)
     provider_raw = json.loads((root / "plugins/demo-text-provider/plugin.json").read_text())
-    niche_raw = json.loads((root / "niches/demo/plugin.json").read_text())
+    prompts_raw = json.loads((root / "plugins/demo-prompts/plugin.json").read_text())
     provider = PluginManifest.model_validate(provider_raw)
-    niche = PluginManifest.model_validate(niche_raw)
+    prompts = PluginManifest.model_validate(prompts_raw)
     with factory() as session:
         session.add_all(
             [
@@ -55,17 +55,17 @@ def test_demo_writing_runs_end_to_end_through_demo_provider(tmp_path: Path) -> N
             ChannelRoute(
                 channel_id="c1",
                 capability="text-generation",
-                purpose="demo/writing",
+                purpose="demo-writing",
                 primary_plugin_id=provider.id,
                 options_json=json.dumps({"model": "demo-deterministic"}),
             )
         )
         session.flush()
-        writing = next(item for item in niche.provides if item.capability == "demo/writing")
+        writing = next(item for item in prompts.provides if item.capability == "demo/writing")
         result = PromptExecutor(session, PurposeRouter(session)).execute(
             channel_id="c1",
             capability=writing,
-            plugin_root=root / "niches/demo",
+            plugin_root=root / "plugins/demo-prompts",
             niche_root=root / "niches/demo",
             channel_prompt=None,
             context={"topic": "healthy habits"},

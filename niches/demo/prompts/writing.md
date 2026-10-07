@@ -1,1 +1,0 @@
-Write a concise demo passage about {{ topic | trim }}.\n
