@@ -74,6 +74,7 @@ def freeze_run_snapshot(session: Session, run_id: str) -> dict[str, Any]:
         "channel_id": project.channel_id,
         "routes": [
             {
+                "route_id": route.id,
                 "capability": route.capability,
                 "purpose": route.purpose,
                 "variant": route.variant,
