@@ -15,22 +15,34 @@ SESSION_TTL = timedelta(hours=12)
 
 @dataclass(frozen=True)
 class SessionRecord:
+    user_id: str
     token_hash: str
     csrf_token: str
     expires_at: datetime
 
 
 class AuthService:
-    def __init__(self, ttl: timedelta = SESSION_TTL, audit_callback: object | None = None) -> None:
+    def __init__(
+        self,
+        ttl: timedelta = SESSION_TTL,
+        audit_callback: object | None = None,
+        *,
+        admin_user_id: str = "admin",
+    ) -> None:
         self._hasher = PasswordHasher()
         self._password_hash: str | None = None
         self._sessions: dict[str, SessionRecord] = {}
         self._ttl = ttl
         self._audit_callback = audit_callback
+        self._admin_user_id = admin_user_id
 
     @property
     def setup_required(self) -> bool:
         return self._password_hash is None
+
+    @property
+    def admin_user_id(self) -> str:
+        return self._admin_user_id
 
     def setup_admin(self, password: str) -> None:
         if not self.setup_required:
@@ -52,7 +64,10 @@ class AuthService:
         csrf = secrets.token_urlsafe(32)
         instant = now or datetime.now(UTC)
         self._sessions[self._digest(token)] = SessionRecord(
-            token_hash=self._digest(token), csrf_token=csrf, expires_at=instant + self._ttl
+            user_id=self._admin_user_id,
+            token_hash=self._digest(token),
+            csrf_token=csrf,
+            expires_at=instant + self._ttl,
         )
         self._audit("auth.login", "success")
         return token, csrf
@@ -75,7 +90,7 @@ class AuthService:
     def _audit(self, action: str, result: str) -> None:
         callback = self._audit_callback
         if callable(callback):
-            callback(action=action, actor="admin", target="auth", result=result)
+            callback(action=action, actor=self._admin_user_id, target="auth", result=result)
 
     @staticmethod
     def _digest(token: str) -> str:

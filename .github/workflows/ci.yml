@@ -38,7 +38,28 @@ jobs:
         run: uv run ruff format --check .
 
       - name: Mypy
-        run: uv run mypy core
+        run: uv run mypy core dashboard
 
       - name: Pytest
         run: uv run pytest
+
+      - name: Build wheel
+        run: uv build --wheel --out-dir dist
+
+      - name: Verify wheel contents
+        run: uv run python tools/check_wheel_contents.py dist
+
+      # Deferred per ERRATA_V5 E14 (CI #305): installed wheel lacks repo-level
+      # runtime resources. Re-enable in the dedicated resource-packaging PR.
+      - name: Installed-wheel smoke
+        if: ${{ false }}
+        shell: pwsh
+        run: |
+          $venv = Join-Path $env:RUNNER_TEMP "wheel-venv"
+          uv venv $venv
+          $whl = (Get-ChildItem dist\*.whl).FullName
+          uv pip install --python "$venv\Scripts\python.exe" $whl
+          $env:YG_DATA_ROOT = Join-Path $env:RUNNER_TEMP "yg-data"
+          Push-Location $env:RUNNER_TEMP
+          & "$venv\Scripts\python.exe" -c "import dashboard.app as m, sysconfig; from pathlib import Path; from fastapi.testclient import TestClient; site=Path(sysconfig.get_paths()['purelib']).resolve(); assert Path(m.__file__).resolve().is_relative_to(site), m.__file__; app=m.create_dashboard_app(); root=app.state.data_root.root; assert not root.is_relative_to(site), root; r=TestClient(app, base_url='http://127.0.0.1:8765').get('/dashboard/login'); assert r.status_code==200, r.status_code; print('installed smoke ok', m.__file__, root)"
+          Pop-Location

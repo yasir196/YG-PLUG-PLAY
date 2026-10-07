@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% block title %}{{ project.title }}{% endblock %}{% block content %}
+<h1>{{ project.title }}</h1><p><a href="/dashboard/channels/{{ project.channel_id }}/projects">← Projects</a></p>
+<div class="card"><h2>Project Brief</h2><form method="post" action="/dashboard/projects/{{ project.id }}/brief"><input type="hidden" name="_csrf" value="{{ session.csrf_token }}">
+<label>Title</label><input name="title" value="{{ brief_data.get('title','') }}" required>
+<label>Topic</label><input name="topic" value="{{ brief_data.get('topic','') }}" required>
+<label>Goal</label><textarea name="goal" required>{{ brief_data.get('goal','') }}</textarea>
+<label>Language</label><input name="language" value="{{ brief_data.get('language','en') }}" required>
+<label>Metadata JSON</label><textarea name="metadata">{{ brief_data.get('metadata',{}) | tojson }}</textarea>
+<button>Save new brief generation</button></form>{% if brief %}<p class="muted">Current generation: {{ brief.generation }}</p>{% endif %}</div>
+<h2>Runs</h2>{% for run in runs %}<div class="card"><a href="/dashboard/runs/{{ run.id }}">Run {{ run.id }}</a> — {{ run.status }}</div>{% else %}<p>No runs yet. Run creation is not wired in this slice.</p>{% endfor %}
+{% endblock %}

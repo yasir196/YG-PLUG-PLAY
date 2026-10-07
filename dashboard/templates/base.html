@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}YG-PLUG-PLAY{% endblock %}</title>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:1100px;margin:0 auto;padding:24px;background:#f7f7f8;color:#171717}
+    nav{display:flex;gap:18px;align-items:center;margin-bottom:28px} nav form{margin-left:auto}
+    a{color:#174ea6} .card{background:white;border:1px solid #ddd;border-radius:10px;padding:18px;margin:12px 0}
+    label{display:block;margin:10px 0 4px} input,textarea,select{width:100%;max-width:720px;padding:9px;box-sizing:border-box}
+    button{padding:9px 14px;margin-top:12px} .muted{color:#666} pre{white-space:pre-wrap}
+  </style>
+</head>
+<body>
+{% if session %}
+<nav>
+  <a href="/dashboard/channels">Channels</a>
+  <a href="/dashboard/approvals">Approvals</a>
+  <form method="post" action="/dashboard/logout"><input type="hidden" name="_csrf" value="{{ session.csrf_token }}"><button>Logout</button></form>
+</nav>
+{% endif %}
+{% block content %}{% endblock %}
+</body>
+</html>

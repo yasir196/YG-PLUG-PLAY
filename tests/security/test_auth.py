@@ -80,3 +80,30 @@ def test_cors_rejects_untrusted_origin() -> None:
     )
     assert response.status_code == 400
     assert response.headers.get("access-control-allow-origin") is None
+
+
+def test_session_carries_configured_admin_identity() -> None:
+    auth = AuthService(admin_user_id="owner")
+    auth.setup_admin(PASSWORD)
+    token, _ = auth.authenticate(PASSWORD)
+    assert auth.require_session(token).user_id == "owner"
+
+
+def test_session_identity_defaults_to_admin() -> None:
+    auth = AuthService()
+    auth.setup_admin(PASSWORD)
+    token, _ = auth.authenticate(PASSWORD)
+    assert auth.require_session(token).user_id == "admin"
+
+
+def test_audit_actor_uses_configured_admin_identity() -> None:
+    events: list[dict[str, str]] = []
+
+    def record(**event: str) -> None:
+        events.append(event)
+
+    auth = AuthService(admin_user_id="owner", audit_callback=record)
+    auth.setup_admin(PASSWORD)
+    auth.authenticate(PASSWORD)
+    assert events
+    assert {event["actor"] for event in events} == {"owner"}

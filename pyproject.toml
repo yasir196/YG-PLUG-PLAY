@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "yg-plug-play"
 version = "0.0.1"
@@ -33,7 +37,10 @@ yg = "tools.yg.cli:app"
 package = true
 
 [tool.setuptools.packages.find]
-include = ["core*", "tools*"]
+include = ["core*", "tools*", "dashboard*"]
+
+[tool.setuptools.package-data]
+dashboard = ["templates/*.html"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

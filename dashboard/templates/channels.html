@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% block title %}Channels{% endblock %}{% block content %}
+<h1>Channels</h1>
+<div class="card"><h2>Create Channel</h2><form method="post" action="/dashboard/channels">
+<input type="hidden" name="_csrf" value="{{ session.csrf_token }}">
+<label>Name</label><input name="name" required>
+<label>Niche</label><input name="niche_id" value="demo" required>
+<label>Niche version</label><input name="niche_version" value="1.0.0" required>
+<button>Create Channel</button></form></div>
+{% for channel in channels %}<div class="card"><a href="/dashboard/channels/{{ channel.id }}"><strong>{{ channel.name }}</strong></a><div class="muted">{{ channel.niche_id }} {{ channel.niche_version }}</div></div>{% else %}<p>No Channels yet.</p>{% endfor %}
+{% endblock %}
