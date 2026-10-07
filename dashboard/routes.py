@@ -200,11 +200,12 @@ def build_dashboard_router(session_dependency: Any, auth_service: AuthService) -
         form = await _form(request)
         require_csrf(form, session)
         try:
+            # Single-admin mode (Errata): every authenticated session is the admin.
             PluginRegistry(db).grant_trust(
                 plugin_id,
                 version,
                 package_sha,
-                actor_id="admin",
+                actor_id=session.user_id,
                 actor_is_admin=True,
             )
             db.commit()

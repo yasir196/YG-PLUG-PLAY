@@ -31,9 +31,10 @@ def create_dashboard_app(
     factory = session_factory(engine)
     auth_service = auth or AuthService()
 
+    admin_id = auth_service.admin_user_id
     with factory() as session:
-        if session.get(User, "admin") is None:
-            session.add(User(id="admin", username="admin"))
+        if session.get(User, admin_id) is None:
+            session.add(User(id=admin_id, username=admin_id))
             session.commit()
 
     app = FastAPI(title="YG-PLUG-PLAY")

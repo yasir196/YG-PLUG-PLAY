@@ -40,6 +40,10 @@ class AuthService:
     def setup_required(self) -> bool:
         return self._password_hash is None
 
+    @property
+    def admin_user_id(self) -> str:
+        return self._admin_user_id
+
     def setup_admin(self, password: str) -> None:
         if not self.setup_required:
             raise ValueError("admin already configured")
