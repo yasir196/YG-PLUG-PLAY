@@ -77,9 +77,7 @@ def _install(db: Session, version: str, sha: str) -> None:
         )
     )
     db.flush()
-    PluginRegistry(db).grant_trust(
-        "provider", version, sha, actor_id="admin", actor_is_admin=True
-    )
+    PluginRegistry(db).grant_trust("provider", version, sha, actor_id="admin", actor_is_admin=True)
 
 
 @pytest.fixture
@@ -111,9 +109,7 @@ def session(tmp_path: Path) -> Iterator[Session]:
             )
         )
         db.add(Project(id="p", channel_id="c1", title="P"))
-        version = WorkflowVersion(
-            workflow_id="w", version=1, definition_json=json.dumps(WORKFLOW)
-        )
+        version = WorkflowVersion(workflow_id="w", version=1, definition_json=json.dumps(WORKFLOW))
         db.add(version)
         db.add(
             ChannelRoute(
