@@ -16,6 +16,7 @@ from core.database.models import (
     PluginVersion,
 )
 from core.plugin_registry.manifest import PluginManifest
+from core.plugin_registry.providers import latest_package
 from core.plugin_registry.registry import PluginRegistry
 
 
@@ -41,35 +42,6 @@ class _RouteChoice:
     plugin_id: str
     options_json: str
     provider: Any = None
-
-
-def _latest_package(session: Session, plugin_id: str, version: str) -> PluginVersion | None:
-    # Single source of the "current package" rule: assignments pin a version only,
-    # so the most recently installed package of that version is the live identity.
-    return session.scalar(
-        select(PluginVersion)
-        .where(
-            PluginVersion.plugin_id == plugin_id,
-            PluginVersion.version == version,
-        )
-        .order_by(PluginVersion.id.desc())
-    )
-
-
-def current_provider_package(
-    session: Session, channel_id: str, plugin_id: str
-) -> PluginVersion | None:
-    """Enabled Channel assignment resolved to its current package, or None."""
-    assignment = session.scalar(
-        select(ChannelPluginAssignment).where(
-            ChannelPluginAssignment.channel_id == channel_id,
-            ChannelPluginAssignment.plugin_id == plugin_id,
-            ChannelPluginAssignment.enabled.is_(True),
-        )
-    )
-    if assignment is None:
-        return None
-    return _latest_package(session, plugin_id, assignment.plugin_version)
 
 
 class PurposeRouter:
@@ -133,7 +105,7 @@ class PurposeRouter:
 
     def _live_provider(self, channel_id: str, plugin_id: str) -> PluginVersion:
         version = self._assigned_version(channel_id, plugin_id)
-        item = _latest_package(self.session, plugin_id, version)
+        item = latest_package(self.session, plugin_id, version)
         if item is None:
             raise RouteError("provider package is not installed")
         return item
