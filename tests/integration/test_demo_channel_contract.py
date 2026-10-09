@@ -122,9 +122,7 @@ def test_niche_version_mismatch_is_rejected(session: Session, layout: DataRootLa
 def test_demo_channel_requires_installed_demo_prompts(
     session: Session, layout: DataRootLayout, tmp_path: Path
 ) -> None:
-    archive, _digest = pack_package(
-        ROOT / "niches" / "demo", tmp_path / "dist", schema_path=SCHEMA
-    )
+    archive, _digest = pack_package(ROOT / "niches" / "demo", tmp_path / "dist", schema_path=SCHEMA)
     ZipInstaller(layout.packages, SCHEMA, session).install(archive)
     session.add(Niche(id="demo", version="1.0.0"))
     session.commit()
