@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 from jsonschema.exceptions import ValidationError
 
+from core.config.data_root import initialize_data_root
 from core.database import create_sqlite_engine, session_factory
 from core.database.models import Base, ProjectBrief
+from core.workspace.bootstrap import install_bundled_demo_packages
 from core.workspace.service import WorkspaceService
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture
@@ -15,7 +20,10 @@ def session(tmp_path):
     engine = create_sqlite_engine(tmp_path / "workspace.db")
     Base.metadata.create_all(engine)
     Session = session_factory(engine)
+    layout = initialize_data_root(install_root=ROOT, override=tmp_path / "data")
     with Session() as db:
+        install_bundled_demo_packages(db, layout, source_root=ROOT)
+        db.commit()
         yield db
     engine.dispose()
 

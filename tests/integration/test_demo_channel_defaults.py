@@ -9,11 +9,14 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from core.config.data_root import initialize_data_root
 from core.database import create_sqlite_engine, session_factory
 from core.database.models import Base, ChannelRoute, Plugin, Workflow, WorkflowVersion
+from core.workspace.bootstrap import install_bundled_demo_packages
 from core.workspace.service import WorkspaceService
 
 DEMO = Path(__file__).resolve().parents[2] / "niches" / "demo"
+ROOT = DEMO.parents[1]
 
 
 def _load(relative: str) -> dict[str, Any]:
@@ -55,7 +58,10 @@ def session(tmp_path: Path) -> Iterator[Session]:
     engine = create_sqlite_engine(tmp_path / "workspace.db")
     Base.metadata.create_all(engine)
     factory = session_factory(engine)
+    layout = initialize_data_root(install_root=ROOT, override=tmp_path / "data")
     with factory() as db:
+        install_bundled_demo_packages(db, layout, source_root=ROOT)
+        db.commit()
         yield db
     engine.dispose()
 
@@ -91,9 +97,9 @@ def test_second_demo_channel_gets_isolated_defaults(session: Session) -> None:
     assert len(plugins) == 1
 
 
-def test_non_demo_niche_gets_no_demo_defaults(session: Session) -> None:
-    channel = WorkspaceService(session).create_channel("Other", "other-niche", "1.0.0")
-    session.commit()
+def test_non_demo_niche_without_installed_package_is_rejected(session: Session) -> None:
+    from core.workspace.service import ChannelCreationError
 
-    assert session.get(Workflow, f"{channel.id}:demo-production") is None
-    assert _routes(session, channel.id) == []
+    with pytest.raises(ChannelCreationError):
+        WorkspaceService(session).create_channel("Other", "other-niche", "1.0.0")
+    assert not session.new
