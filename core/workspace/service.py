@@ -122,7 +122,7 @@ class WorkspaceService:
         self.open_channel(channel_id)
         return list(
             self.session.scalars(
-                select(Project).where(Channel.id == channel_id).order_by(Project.created_at)
+                select(Project).where(Project.channel_id == channel_id).order_by(Project.created_at)
             )
         )
 
