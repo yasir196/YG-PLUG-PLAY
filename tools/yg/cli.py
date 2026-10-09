@@ -3,13 +3,20 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated, NoReturn
 
 import typer
 
 from core.plugin_registry import packing
 from core.plugin_registry.manifest import PluginManifest
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
+
+    from core.config import DataRootLayout
 
 PackageError = packing.PackageError
 
@@ -17,9 +24,11 @@ app = typer.Typer(help="YG-PLUG-PLAY developer tools.")
 plugin_app = typer.Typer(help="Validate and pack plugin/niche packages.")
 channel_app = typer.Typer(help="Manage Channels.")
 project_app = typer.Typer(help="Manage Projects and Briefs.")
+demo_app = typer.Typer(help="Bundled demo packages (checkout mode).")
 app.add_typer(plugin_app, name="plugin")
 app.add_typer(channel_app, name="channel")
 app.add_typer(project_app, name="project")
+app.add_typer(demo_app, name="demo")
 
 ROOT = Path(__file__).resolve().parents[2]
 PLUGIN_SCHEMA = ROOT / "schemas" / "plugin.schema.json"
@@ -68,77 +77,111 @@ def plugin_pack(
     typer.echo(f"sha256:{digest}")
 
 
-def _workspace_service():
+def _fail(exc: Exception) -> NoReturn:
+    typer.echo(f"ERROR: {exc}", err=True)
+    raise typer.Exit(code=1) from exc
+
+
+@contextmanager
+def _workspace(*, write: bool = False) -> Iterator[tuple[DataRootLayout, Session]]:
+    """Open the data root DB; ValueError -> rollback, `ERROR: ...`, exit 1."""
+
     from core.config import initialize_data_root
     from core.database import create_sqlite_engine, session_factory
-    from core.workspace import WorkspaceService
+    from core.database.models import Base
 
-    layout = initialize_data_root()
-    engine = create_sqlite_engine(layout.root / "db" / "core.db")
-    return engine, session_factory(engine), WorkspaceService
+    try:
+        layout = initialize_data_root(install_root=ROOT)
+    except ValueError as exc:
+        _fail(exc)
+    engine = create_sqlite_engine(layout.db / "core.db")
+    try:
+        Base.metadata.create_all(engine)
+        factory = session_factory(engine)
+        opener = factory.begin if write else factory
+        with opener() as session:
+            yield layout, session
+    except ValueError as exc:
+        _fail(exc)
+    finally:
+        engine.dispose()
+
+
+@demo_app.command("bootstrap")
+def demo_bootstrap() -> None:
+    """Install bundled demo packages into the data root (idempotent, checkout mode)."""
+
+    from core.workspace.bootstrap import install_bundled_demo_packages
+
+    with _workspace(write=True) as (layout, session):
+        installed = install_bundled_demo_packages(session, layout, source_root=ROOT)
+    for item in installed:
+        typer.echo(f"{item.manifest.id} {item.manifest.version} sha256:{item.sha256}")
 
 
 @channel_app.command("create")
 def channel_create(name: str, niche: str, niche_version: str = "1.0.0") -> None:
-    engine, factory, service_type = _workspace_service()
-    with factory.begin() as session:
-        item = service_type(session).create_channel(name, niche, niche_version)
-        typer.echo(item.id)
-    engine.dispose()
+    from core.workspace import WorkspaceService
+
+    with _workspace(write=True) as (_layout, session):
+        channel_id = WorkspaceService(session).create_channel(name, niche, niche_version).id
+    typer.echo(channel_id)
 
 
 @channel_app.command("list")
 def channel_list() -> None:
-    engine, factory, service_type = _workspace_service()
-    with factory() as session:
-        for item in service_type(session).list_channels():
+    from core.workspace import WorkspaceService
+
+    with _workspace() as (_layout, session):
+        for item in WorkspaceService(session).list_channels():
             typer.echo(f"{item.id}\t{item.name}\t{item.niche_id}@{item.niche_version}")
-    engine.dispose()
 
 
 @channel_app.command("open")
 def channel_open(channel_id: str) -> None:
-    engine, factory, service_type = _workspace_service()
-    with factory() as session:
-        item = service_type(session).open_channel(channel_id)
+    from core.workspace import WorkspaceService
+
+    with _workspace() as (_layout, session):
+        item = WorkspaceService(session).open_channel(channel_id)
         typer.echo(json.dumps({"id": item.id, "name": item.name, "niche": item.niche_id}))
-    engine.dispose()
 
 
 @project_app.command("create")
 def project_create(channel_id: str, title: str) -> None:
-    engine, factory, service_type = _workspace_service()
-    with factory.begin() as session:
-        typer.echo(service_type(session).create_project(channel_id, title).id)
-    engine.dispose()
+    from core.workspace import WorkspaceService
+
+    with _workspace(write=True) as (_layout, session):
+        project_id = WorkspaceService(session).create_project(channel_id, title).id
+    typer.echo(project_id)
 
 
 @project_app.command("list")
 def project_list(channel_id: str) -> None:
-    engine, factory, service_type = _workspace_service()
-    with factory() as session:
-        for item in service_type(session).list_projects(channel_id):
+    from core.workspace import WorkspaceService
+
+    with _workspace() as (_layout, session):
+        for item in WorkspaceService(session).list_projects(channel_id):
             typer.echo(f"{item.id}\t{item.title}")
-    engine.dispose()
 
 
 @project_app.command("open")
 def project_open(project_id: str) -> None:
-    engine, factory, service_type = _workspace_service()
-    with factory() as session:
-        item = service_type(session).open_project(project_id)
+    from core.workspace import WorkspaceService
+
+    with _workspace() as (_layout, session):
+        item = WorkspaceService(session).open_project(project_id)
         typer.echo(json.dumps({"id": item.id, "title": item.title, "channel_id": item.channel_id}))
-    engine.dispose()
 
 
 @project_app.command("brief")
 def project_brief(project_id: str, brief_file: Path) -> None:
-    engine, factory, service_type = _workspace_service()
+    from core.workspace import WorkspaceService
+
     data = json.loads(brief_file.read_text(encoding="utf-8"))
-    with factory.begin() as session:
-        brief = service_type(session).save_brief(project_id, data)
-        typer.echo(f"{brief.id}\tgeneration={brief.generation}")
-    engine.dispose()
+    with _workspace(write=True) as (_layout, session):
+        brief = WorkspaceService(session).save_brief(project_id, data)
+        line = f"{brief.id}\tgeneration={brief.generation}"
+    typer.echo(line)
 
 
 if __name__ == "__main__":
