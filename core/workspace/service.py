@@ -75,9 +75,7 @@ class WorkspaceService:
         )
         return channel
 
-    def _installed_channel_packages(
-        self, niche_id: str, niche_version: str
-    ) -> list[PluginVersion]:
+    def _installed_channel_packages(self, niche_id: str, niche_version: str) -> list[PluginVersion]:
         niche = self.session.get(Niche, niche_id)
         if niche is None:
             raise ChannelCreationError(f"niche {niche_id} is not registered")
@@ -89,7 +87,9 @@ class WorkspaceService:
         for plugin_id, version in REQUIRED_CHANNEL_PACKAGES.get(niche_id, ()):
             item = latest_package(self.session, plugin_id, version)
             if item is None:
-                raise ChannelCreationError(f"required package {plugin_id}@{version} is not installed")
+                raise ChannelCreationError(
+                    f"required package {plugin_id}@{version} is not installed"
+                )
             required.append(item)
         return required
 
