@@ -12,13 +12,25 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from core.audit import AuditEvent, AuditService
-from core.database.models import Channel, Niche, Project, ProjectBrief
+from core.database.models import Channel, Niche, PluginVersion, Project, ProjectBrief
+from core.plugin_registry.providers import latest_package
+from core.plugin_registry.registry import PluginRegistry, RegistryError
 from core.workspace.defaults import materialize_demo_defaults
 
 ROOT = Path(__file__).resolve().parents[2]
 BRIEF_SCHEMA = json.loads(
     (ROOT / "contracts/standard/schemas/project.brief.schema.json").read_text(encoding="utf-8")
 )
+
+# Config-only packages a new Channel of a niche requires (Cycle C-delta).
+# Assignment pins version only; identity is the current package (E15).
+REQUIRED_CHANNEL_PACKAGES: dict[str, tuple[tuple[str, str], ...]] = {
+    "demo": (("demo-prompts", "1.0.0"),),
+}
+
+
+class ChannelCreationError(ValueError):
+    """Channel creation rejected: required installed state is missing or invalid."""
 
 
 class WorkspaceService:
@@ -31,12 +43,9 @@ class WorkspaceService:
         self.audit = AuditService(session)
 
     def create_channel(self, name: str, niche_id: str, niche_version: str) -> Channel:
-        niche = self.session.get(Niche, niche_id)
-        if niche is None:
-            niche = Niche(id=niche_id, version=niche_version)
-            self.session.add(niche)
-        elif niche.version != niche_version:
-            raise ValueError("requested niche pin is not installed")
+        # Validate before adding anything: Channel creation consumes installed
+        # state and never invents Niche rows or package identities.
+        required = self._installed_channel_packages(niche_id, niche_version)
         channel = Channel(
             id=uuid.uuid4().hex,
             name=name,
@@ -47,6 +56,14 @@ class WorkspaceService:
         self.session.flush()
         if niche_id == "demo":
             materialize_demo_defaults(self.session, channel.id, ROOT)
+        registry = PluginRegistry(self.session)
+        for item in required:
+            try:
+                registry.assign(
+                    channel.id, item.plugin_id, item.version, item.package_sha256, enabled=True
+                )
+            except RegistryError as exc:
+                raise ChannelCreationError(str(exc)) from exc
         self.audit.record(
             AuditEvent(
                 self.actor,
@@ -57,6 +74,24 @@ class WorkspaceService:
             )
         )
         return channel
+
+    def _installed_channel_packages(self, niche_id: str, niche_version: str) -> list[PluginVersion]:
+        niche = self.session.get(Niche, niche_id)
+        if niche is None:
+            raise ChannelCreationError(f"niche {niche_id} is not registered")
+        if niche.version != niche_version:
+            raise ChannelCreationError("requested niche pin is not installed")
+        if latest_package(self.session, niche_id, niche_version) is None:
+            raise ChannelCreationError(f"niche package {niche_id}@{niche_version} is not installed")
+        required: list[PluginVersion] = []
+        for plugin_id, version in REQUIRED_CHANNEL_PACKAGES.get(niche_id, ()):
+            item = latest_package(self.session, plugin_id, version)
+            if item is None:
+                raise ChannelCreationError(
+                    f"required package {plugin_id}@{version} is not installed"
+                )
+            required.append(item)
+        return required
 
     def list_channels(self) -> list[Channel]:
         return list(self.session.scalars(select(Channel).order_by(Channel.created_at)))

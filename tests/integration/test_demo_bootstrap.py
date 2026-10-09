@@ -21,7 +21,7 @@ from core.database.models import (
     PluginVersion,
 )
 from core.plugin_registry.packing import pack_package
-from core.plugin_registry.providers import ProviderResolutionError, resolve_capability_provider
+from core.plugin_registry.providers import resolve_capability_provider
 from core.plugin_registry.registry import PluginRegistry
 from core.workspace.service import WorkspaceService
 
@@ -112,16 +112,19 @@ def test_bootstrap_registers_niche_pin_and_capabilities(
     assert {"demo/brief-ready", "demo/writing", "demo/review"} <= ids
 
 
-def test_bootstrap_resolves_niche_but_not_unassigned_plugin(
+def test_bootstrapped_demo_channel_resolves_niche_and_assigned_prompts(
     session: Session, layout: DataRootLayout
 ) -> None:
     installed = dict(_bootstrap(session, layout))
     channel = WorkspaceService(session).create_channel("Demo", "demo", "1.0.0")
     session.commit()
-    resolved = resolve_capability_provider(session, channel.id, "demo/brief-ready")
-    assert (resolved.plugin_id, resolved.package_sha256) == ("demo", installed["demo"])
-    with pytest.raises(ProviderResolutionError, match="^no capability provider$"):
-        resolve_capability_provider(session, channel.id, "demo/writing")
+    brief = resolve_capability_provider(session, channel.id, "demo/brief-ready")
+    assert (brief.plugin_id, brief.package_sha256) == ("demo", installed["demo"])
+    writing = resolve_capability_provider(session, channel.id, "demo/writing")
+    assert (writing.plugin_id, writing.package_sha256) == (
+        "demo-prompts",
+        installed["demo-prompts"],
+    )
 
 
 def test_bootstrapped_provider_is_installed_but_untrusted(
